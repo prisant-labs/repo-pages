@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Repo browser</title>
+<title>Repo Pages</title>
 <!--
   The outline folder icons use shapes from Lucide (https://lucide.dev).
 
@@ -28,7 +28,7 @@
 <script>
   (function () {
     try {
-      var t = JSON.parse(localStorage.getItem("rb.theme"));
+      var t = JSON.parse(localStorage.getItem("rp.theme"));
       if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
     } catch (e) {}
   })();
@@ -618,13 +618,13 @@
 <script>
 /* ───────────── Browser storage: one key registry, every value validated on load ───────────── */
 const KEYS = {
-  theme: "rb.theme", open: "rb.tree.open", indent: "rb.tree.indent", indentCustom: "rb.tree.indentCustom",
-  guideLines: "rb.tree.guideLines", mdTheme: "rb.md.theme", mdTextScale: "rb.md.textScale",
-  mdWidth: "rb.md.width", notesMode: "rb.notes.mode", history: "rb.history", navWidth: "rb.nav.width", navCollapsed: "rb.nav.collapsed",
-  uiScale: "rb.ui.scale", treeScale: "rb.tree.scale", density: "rb.tree.density", sort: "rb.tree.sort", zebra: "rb.tree.zebra",
-  zebraSpan: "rb.tree.zebraSpan", zebraStrength: "rb.tree.zebraStrength", folderIcons: "rb.tree.folderIcons", iconStyle: "rb.tree.iconStyle",
-  iconColor: "rb.tree.iconColor", typeBadges: "rb.tree.typeBadges", folderCounts: "rb.tree.folderCounts", wrapNames: "rb.tree.wrapNames",
-  reveal: "rb.tree.reveal", defaultTab: "rb.nav.defaultTab", recentDays: "rb.nav.recentDays"
+  theme: "rp.theme", open: "rp.tree.open", indent: "rp.tree.indent", indentCustom: "rp.tree.indentCustom",
+  guideLines: "rp.tree.guideLines", mdTheme: "rp.md.theme", mdTextScale: "rp.md.textScale",
+  mdWidth: "rp.md.width", notesMode: "rp.notes.mode", history: "rp.history", navWidth: "rp.nav.width", navCollapsed: "rp.nav.collapsed",
+  uiScale: "rp.ui.scale", treeScale: "rp.tree.scale", density: "rp.tree.density", sort: "rp.tree.sort", zebra: "rp.tree.zebra",
+  zebraSpan: "rp.tree.zebraSpan", zebraStrength: "rp.tree.zebraStrength", folderIcons: "rp.tree.folderIcons", iconStyle: "rp.tree.iconStyle",
+  iconColor: "rp.tree.iconColor", typeBadges: "rp.tree.typeBadges", folderCounts: "rp.tree.folderCounts", wrapNames: "rp.tree.wrapNames",
+  reveal: "rp.tree.reveal", defaultTab: "rp.nav.defaultTab", recentDays: "rp.nav.recentDays"
 };
 function load(key, valid, fallback) {
   try { const v = JSON.parse(localStorage.getItem(key)); return v !== null && valid(v) ? v : fallback; } catch (e) { return fallback; }

@@ -7,7 +7,7 @@ tags: [initech, intranet, start-here]
 
 Welcome to the Initech intranet. Everything a new hire needs is in here somewhere, usually one folder deeper than you expect.
 
-> This is sample content for the repo browser demo. Initech, its people and its memos are a parody of a 1999 film about office life. No real company is described.
+> This is sample content for the repo-pages demo. Initech, its people and its memos are a parody of a 1999 film about office life. No real company is described.
 
 ## Start here
 

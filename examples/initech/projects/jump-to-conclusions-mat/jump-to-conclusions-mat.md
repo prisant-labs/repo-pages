@@ -5,7 +5,7 @@ tags: [notes, demo, tom]
 
 # Notes: Jump to Conclusions Mat demo
 
-These notes sit beside [jump-to-conclusions-mat.html](jump-to-conclusions-mat.html). The repo browser pairs a page with a Markdown file of the same name, so these notes show next to the demo.
+These notes sit beside [jump-to-conclusions-mat.html](jump-to-conclusions-mat.html). repo-pages pairs a page with a Markdown file of the same name, so these notes show next to the demo.
 
 ## What it does
 

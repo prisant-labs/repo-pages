@@ -1,10 +1,10 @@
 /* Settings behavior checks that run inside the viewer page.
    Open any Markdown file in the built site, then run this whole file in the page
    (a browser tool's evaluate, or the DevTools console). If you load it from a path
-   instead, read window.rbChecksResult afterwards. It takes no screenshots, gives one
+   instead, read window.rpChecksResult afterwards. It takes no screenshots, gives one
    short JSON string and restores your settings when it finishes.
    Failure names use the terms in docs/settings-spec.md. A "skip" means the repo has no suitable example. */
-window.rbChecks = async function rbChecks() {
+window.rpChecks = async function rpChecks() {
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const res = { pass: 0, fail: [], skip: [] };
   const check = (name, ok, detail) => { if (ok) res.pass++; else res.fail.push(detail === undefined ? name : `${name}: ${detail}`); };
@@ -14,7 +14,7 @@ window.rbChecks = async function rbChecks() {
   if (typeof PREFS === "undefined" || typeof applyPrefs !== "function") return JSON.stringify({ pass: 0, fail: ["update not applied: PREFS or applyPrefs is missing"], skip: [] });
 
   // Keep everything so the reader's page is left as it was
-  const saved = Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith("rb.")).map(k => [k, localStorage.getItem(k)]));
+  const saved = Object.fromEntries(Object.keys(localStorage).filter(k => k.startsWith("rp.")).map(k => [k, localStorage.getItem(k)]));
   const savedPrefs = { ...PREFS }, savedDoc = [mdTextScale, mdWidth, mdDocTheme], savedOpen = new Set(state.open);
   const savedView = state.view, savedHash = location.hash, savedCommits = COMMITS;
   const setPrefs = o => { Object.assign(PREFS, o); applyPrefs(); };
@@ -213,7 +213,7 @@ window.rbChecks = async function rbChecks() {
     COMMITS = savedCommits;
     Object.assign(PREFS, savedPrefs); [mdTextScale, mdWidth, mdDocTheme] = savedDoc;
     state.view = savedView; state.open = savedOpen;
-    Object.keys(localStorage).filter(k => k.startsWith("rb.")).forEach(k => localStorage.removeItem(k));
+    Object.keys(localStorage).filter(k => k.startsWith("rp.")).forEach(k => localStorage.removeItem(k));
     Object.entries(saved).forEach(([k, v]) => localStorage.setItem(k, v));
     if (typeof closeSettings === "function") closeSettings();
     applyMdReaderPrefs(); applyTheme(); applyPrefs();
@@ -221,5 +221,5 @@ window.rbChecks = async function rbChecks() {
   }
   return JSON.stringify(res);
 };
-window.rbChecksResult = window.rbChecks();
-window.rbChecksResult;
+window.rpChecksResult = window.rpChecks();
+window.rpChecksResult;

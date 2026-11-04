@@ -1,6 +1,6 @@
 ---
 description: Behavior spec for the viewer's reader settings - every setting's values, defaults, storage key, scope and edge cases, the Markdown reader controls, remembered state, and known gaps with recommended fixes.
-tags: [repo-browser, settings, spec, sidebar, tree, theme, text-size, alternating-rows, folder-icons, sort, localStorage]
+tags: [repo-pages, settings, spec, sidebar, tree, theme, text-size, alternating-rows, folder-icons, sort, localStorage]
 ---
 
 # Settings spec
@@ -14,42 +14,42 @@ Names such as `--ui-scale` and `.tree-file` are the ones in [viewer/index.html](
 - **Save on change.** There is no Save button. Each change applies at once and is written to browser storage.
 - **Validate on load.** A stored value outside the allowed list or range falls back to the default. Browser storage is untrusted, because any page on the same origin can write it.
 - **Survive storage failure.** If storage is blocked, the defaults apply and the page still works.
-- **One key registry.** All keys come from one constant with one prefix, `rb.`.
+- **One key registry.** All keys come from one constant with one prefix, `rp.`.
 
 ## Settings at a glance
 
-Defaults are in bold. Every key uses the `rb.` prefix.
+Defaults are in bold. Every key uses the `rp.` prefix.
 
 | Section | Setting | Control | Values | Key |
 |---|---|---|---|---|
-| Appearance | Theme | 3 options | Light, Dark, **System** | `rb.theme` |
-| Appearance | Interface text | 4 options | S 90%, **M 100%**, L 110%, XL 125% | `rb.ui.scale` |
-| Tree | Tree text | 4 options | S 90%, **M 100%**, L 110%, XL 125% | `rb.tree.scale` |
-| Tree | Folder indentation | 3 options | Compact, **Default**, Custom | `rb.tree.indent` |
-| Tree | Custom indentation | Number, shown for Custom | 0.5 to 4.0 rem, **2.0** | `rb.tree.indentCustom` |
-| Tree | Row density | 3 options | Compact, **Default**, Comfortable | `rb.tree.density` |
-| Tree | Sort | 2 options | **Name**, Recently updated | `rb.tree.sort` |
-| Tree | Vertical guide lines | Toggle | **On**, Off | `rb.tree.guideLines` |
-| Tree | Alternating row colors | Toggle | On, **Off** | `rb.tree.zebra` |
-| Tree | Stripes, shown when on | 2 options | **Full row**, From indent | `rb.tree.zebraSpan` |
-| Tree | Strength, shown when on | 2 options | Subtle, **Medium** | `rb.tree.zebraStrength` |
-| Tree | Folder icons | Toggle | On, **Off** | `rb.tree.folderIcons` |
-| Tree | Style, shown when on | 2 options | Outline, **Filled** | `rb.tree.iconStyle` |
-| Tree | Color, shown when on | 2 options | Muted, **Accent** | `rb.tree.iconColor` |
-| Tree | File type badges | Toggle | **On**, Off | `rb.tree.typeBadges` |
-| Tree | Item counts on folders | Toggle | **On**, Off | `rb.tree.folderCounts` |
-| Tree | Wrap long names | Toggle | On, **Off** | `rb.tree.wrapNames` |
-| Tree | Reveal the open file | Toggle | **On**, Off | `rb.tree.reveal` |
-| Lists | Start on tab | 5 options | **Folders**, New, Updated, Authors, History | `rb.nav.defaultTab` |
-| Lists | New and Updated show | 4 options | **Latest**, 7d, 30d, 90d | `rb.nav.recentDays` |
-| Documents | Text | Stepper | 80, 90, **100**, 110, 120, 135, 150% | `rb.md.textScale` |
-| Documents | Width | 3 options | Narrow, **Normal**, Full | `rb.md.width` |
-| Documents | Doc theme | 3 options | **Match**, Light, Dark | `rb.md.theme` |
+| Appearance | Theme | 3 options | Light, Dark, **System** | `rp.theme` |
+| Appearance | Interface text | 4 options | S 90%, **M 100%**, L 110%, XL 125% | `rp.ui.scale` |
+| Tree | Tree text | 4 options | S 90%, **M 100%**, L 110%, XL 125% | `rp.tree.scale` |
+| Tree | Folder indentation | 3 options | Compact, **Default**, Custom | `rp.tree.indent` |
+| Tree | Custom indentation | Number, shown for Custom | 0.5 to 4.0 rem, **2.0** | `rp.tree.indentCustom` |
+| Tree | Row density | 3 options | Compact, **Default**, Comfortable | `rp.tree.density` |
+| Tree | Sort | 2 options | **Name**, Recently updated | `rp.tree.sort` |
+| Tree | Vertical guide lines | Toggle | **On**, Off | `rp.tree.guideLines` |
+| Tree | Alternating row colors | Toggle | On, **Off** | `rp.tree.zebra` |
+| Tree | Stripes, shown when on | 2 options | **Full row**, From indent | `rp.tree.zebraSpan` |
+| Tree | Strength, shown when on | 2 options | Subtle, **Medium** | `rp.tree.zebraStrength` |
+| Tree | Folder icons | Toggle | On, **Off** | `rp.tree.folderIcons` |
+| Tree | Style, shown when on | 2 options | Outline, **Filled** | `rp.tree.iconStyle` |
+| Tree | Color, shown when on | 2 options | Muted, **Accent** | `rp.tree.iconColor` |
+| Tree | File type badges | Toggle | **On**, Off | `rp.tree.typeBadges` |
+| Tree | Item counts on folders | Toggle | **On**, Off | `rp.tree.folderCounts` |
+| Tree | Wrap long names | Toggle | On, **Off** | `rp.tree.wrapNames` |
+| Tree | Reveal the open file | Toggle | **On**, Off | `rp.tree.reveal` |
+| Lists | Start on tab | 5 options | **Folders**, New, Updated, Authors, History | `rp.nav.defaultTab` |
+| Lists | New and Updated show | 4 options | **Latest**, 7d, 30d, 90d | `rp.nav.recentDays` |
+| Documents | Text | Stepper | 80, 90, **100**, 110, 120, 135, 150% | `rp.md.textScale` |
+| Documents | Width | 3 options | Narrow, **Normal**, Full | `rp.md.width` |
+| Documents | Doc theme | 3 options | **Match**, Light, Dark | `rp.md.theme` |
 
 ## Storage
 
-- `rb.theme` stores `"light"`, `"dark"` or `"system"`. The script in `<head>` that applies the theme before first paint accepts only `"light"` and `"dark"`, so `"system"` sets no theme attribute and the CSS follows the operating system.
-- Values are stored as JSON. `rb.nav.recentDays` holds a number (`0`, `7`, `30` or `90`), and `0` means Latest. The two text scales hold `0.9`, `1`, `1.1` or `1.25`.
+- `rp.theme` stores `"light"`, `"dark"` or `"system"`. The script in `<head>` that applies the theme before first paint accepts only `"light"` and `"dark"`, so `"system"` sets no theme attribute and the CSS follows the operating system.
+- Values are stored as JSON. `rp.nav.recentDays` holds a number (`0`, `7`, `30` or `90`), and `0` means Latest. The two text scales hold `0.9`, `1`, `1.1` or `1.25`.
 - Each setting has one registry entry with its storage key, validator and default. Reset reads its defaults from that registry, so a new setting is reset without extra code.
 - A stored value that fails its validator gives the default. This includes values from an earlier design, such as an icon color of `"amber"`.
 
@@ -234,14 +234,14 @@ All keys come from the `KEYS` constant in the viewer. The prefix changes in one 
 
 | Keys | Holds |
 |---|---|
-| `rb.theme`, `rb.ui.scale` | Appearance |
-| `rb.tree.scale`, `rb.tree.indent`, `rb.tree.indentCustom`, `rb.tree.density`, `rb.tree.sort`, `rb.tree.guideLines` | Tree layout |
-| `rb.tree.zebra`, `rb.tree.zebraSpan`, `rb.tree.zebraStrength` | Alternating rows |
-| `rb.tree.folderIcons`, `rb.tree.iconStyle`, `rb.tree.iconColor` | Folder icons |
-| `rb.tree.typeBadges`, `rb.tree.folderCounts`, `rb.tree.wrapNames`, `rb.tree.reveal` | Other tree display settings |
-| `rb.nav.defaultTab`, `rb.nav.recentDays` | Lists |
-| `rb.md.theme`, `rb.md.textScale`, `rb.md.width` | Documents |
-| `rb.tree.open`, `rb.nav.collapsed`, `rb.nav.width`, `rb.notes.mode`, `rb.history` | Remembered state |
+| `rp.theme`, `rp.ui.scale` | Appearance |
+| `rp.tree.scale`, `rp.tree.indent`, `rp.tree.indentCustom`, `rp.tree.density`, `rp.tree.sort`, `rp.tree.guideLines` | Tree layout |
+| `rp.tree.zebra`, `rp.tree.zebraSpan`, `rp.tree.zebraStrength` | Alternating rows |
+| `rp.tree.folderIcons`, `rp.tree.iconStyle`, `rp.tree.iconColor` | Folder icons |
+| `rp.tree.typeBadges`, `rp.tree.folderCounts`, `rp.tree.wrapNames`, `rp.tree.reveal` | Other tree display settings |
+| `rp.nav.defaultTab`, `rp.nav.recentDays` | Lists |
+| `rp.md.theme`, `rp.md.textScale`, `rp.md.width` | Documents |
+| `rp.tree.open`, `rp.nav.collapsed`, `rp.nav.width`, `rp.notes.mode`, `rp.history` | Remembered state |
 
 Browser storage is shared by origin. Project sites under one domain share an origin, so they also share these preferences. That includes every site under a single custom domain. A per-site prefix would keep them apart, and that is not built.
 

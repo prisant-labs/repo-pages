@@ -7,7 +7,7 @@
      node tests/run_browser_checks.mjs <https-url>  check a deployed demo
 
    Install Playwright first: npm install --no-save --no-package-lock playwright
-   Set RB_BROWSER_CHANNEL (for example msedge or chrome) to use an installed browser. */
+   Set RP_BROWSER_CHANNEL (for example msedge or chrome) to use an installed browser. */
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { dirname, join, normalize, resolve } from "node:path";
@@ -39,7 +39,7 @@ function serve(folder) {
 
 const server = isUrl ? null : await serve(target);
 const base = isUrl ? target.replace(/\/?$/, "/") : `http://127.0.0.1:${server.address().port}/`;
-const channel = process.env.RB_BROWSER_CHANNEL || undefined;
+const channel = process.env.RP_BROWSER_CHANNEL || undefined;
 const browser = await chromium.launch({ channel });
 let failed = true;
 try {
@@ -50,7 +50,7 @@ try {
   await page.waitForSelector("#settingsBtn");
   await page.waitForFunction(() => document.title.includes("tps-reports"), null, { timeout: 15000 });
   await page.addScriptTag({ path: CHECKS });
-  const raw = await page.evaluate(() => window.rbChecksResult);
+  const raw = await page.evaluate(() => window.rpChecksResult);
   const result = JSON.parse(raw);
   console.log(`${base} ${raw}`);
   for (const e of pageErrors) console.error(`Page error: ${e}`);

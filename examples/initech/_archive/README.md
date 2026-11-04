@@ -5,7 +5,7 @@ tags: [archive]
 
 # Archive
 
-Superseded documents. The folder name starts with an underscore, which plain GitHub Pages (Jekyll) would hide. The repo browser shows it.
+Superseded documents. The folder name starts with an underscore, which plain GitHub Pages (Jekyll) would hide. repo-pages shows it.
 
 | Document | Replaced by |
 |---|---|

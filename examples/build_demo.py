@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build the repo browser demo: one self-contained HTML file with sample content.
+Build the repo-pages demo: one self-contained HTML file with sample content.
 
 Replays a commit script over a sample corpus into a temporary git repo, runs
 the real site generator on it, then folds the viewer, its two vendored
@@ -39,7 +39,7 @@ DEFAULT_OUT = HERE.parent / "_site" / "index.html"
 
 SITE_CONFIG = {
     "title": "Initech Intranet",
-    "description": "Sample content for the repo browser demo. A parody intranet; no real company is described.",
+    "description": "Sample content for the repo-pages demo. A parody intranet; no real company is described.",
     "exclude": [],
     "includeHidden": False,
     "sandboxHtml": False,
@@ -58,16 +58,16 @@ TEXT = "text/plain;charset=utf-8"
 MAIN_SCRIPT = "<script>\n/* ───────────── Browser storage"
 SWAPS = [
     ('const fileUrl = p => p.split("/").map(encodeURIComponent).join("/");',
-     "const fileUrl = p => RB_EMBED.url(p);"),
+     "const fileUrl = p => RP_EMBED.url(p);"),
     ("const ghUrl = (kind, p) => `${CONFIG.repoUrl}/${kind}/${CONFIG.branch}/${fileUrl(p)}`;",
-     "const ghUrl = (kind, p) => `${CONFIG.repoUrl}/${kind}/${CONFIG.branch}/${RB_EMBED.enc(p)}`;"),
+     "const ghUrl = (kind, p) => `${CONFIG.repoUrl}/${kind}/${CONFIG.branch}/${RP_EMBED.enc(p)}`;"),
     ("${CONFIG.repoUrl}/commits/${CONFIG.branch}/${fileUrl(f.path)}",
-     "${CONFIG.repoUrl}/commits/${CONFIG.branch}/${RB_EMBED.enc(f.path)}"),
+     "${CONFIG.repoUrl}/commits/${CONFIG.branch}/${RP_EMBED.enc(f.path)}"),
 ]
 
 # Serves site-data.json and every file from inside the page. Blob URLs are
 # made on first use, so the iframe, images, PDF, Raw and New tab all work.
-EMBED_JS = """window.RB_EMBED = (() => {
+EMBED_JS = """window.RP_EMBED = (() => {
   const DATA = __DATA__;
   const FILES = __FILES__;
   const made = new Map();
@@ -213,7 +213,7 @@ def bundle(site: Path, out: Path) -> tuple[int, int]:
     inject = "".join(script_tag(v.read_text(encoding="utf-8")) for v in vendor)
     inject += script_tag(EMBED_JS.replace("__DATA__", js_literal(data)).replace("__FILES__", js_literal(files)))
     html = html.replace(MAIN_SCRIPT, inject + MAIN_SCRIPT)
-    html = html.replace("<title>Repo browser</title>", f"<title>{SITE_CONFIG['title']} (demo)</title>", 1)
+    html = html.replace("<title>Repo Pages</title>", f"<title>{SITE_CONFIG['title']} (demo)</title>", 1)
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
@@ -230,7 +230,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--keep", action="store_true", help="keep the temporary repo and site, and print where")
     args = ap.parse_args(argv)
 
-    work = Path(tempfile.mkdtemp(prefix="rb-demo-"))
+    work = Path(tempfile.mkdtemp(prefix="repo-pages-demo-"))
     try:
         repo, site = work / "repo", work / "_site"
         repo.mkdir()

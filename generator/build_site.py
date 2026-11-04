@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build the repo-browser site for GitHub Pages.
+Build the repo-pages site for GitHub Pages.
 
 Copies every published tracked file into the output folder at its own path,
 adds the viewer from .github/site/, and writes site-data.json with each
