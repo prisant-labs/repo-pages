@@ -1,0 +1,13 @@
+{
+  "device": "Fourth-floor laser printer",
+  "firmware": "2.1.0",
+  "codes": [
+    { "code": "PC LOAD LETTER", "meaning": "Paper cassette: load letter-size paper", "what_people_think_it_means": "Unknown", "frequency": "constant" },
+    { "code": "13.1 PAPER JAM", "meaning": "Paper jam in the input area", "what_people_think_it_means": "Paper jam", "frequency": "hourly" },
+    { "code": "50 SERVICE", "meaning": "Fuser error; turn off for 20 minutes", "what_people_think_it_means": "Call someone", "frequency": "weekly" },
+    { "code": "TONER LOW", "meaning": "Toner low", "what_people_think_it_means": "Shake the cartridge", "frequency": "daily" }
+  ],
+  "status": "retired",
+  "retired_by": ["Peter", "Michael", "Samir"],
+  "location": "a field"
+}

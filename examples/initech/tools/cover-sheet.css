@@ -1,0 +1,8 @@
+/* Print styles for the TPS cover sheet. */
+.cover-sheet { font-family: Georgia, serif; max-width: 7in; margin: 0 auto; }
+.cover-sheet h1 { font-size: 18pt; text-transform: uppercase; letter-spacing: 0.05em; }
+.cover-sheet th { text-align: left; width: 40%; font-weight: normal; color: #555; }
+.cover-sheet td { border-bottom: 1px solid #000; height: 0.35in; }
+.cover-sheet .managers { display: flex; gap: 0.15in; margin-top: 0.3in; }
+.cover-sheet .box { width: 0.45in; height: 0.35in; border: 1px solid #000; }
+@media print { .cover-sheet { page-break-after: always; } }

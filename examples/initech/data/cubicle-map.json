@@ -1,0 +1,11 @@
+{
+  "floor_4": {
+    "wall_height_inches": 62,
+    "rows": [
+      { "row": "A", "cubicles": [ { "id": "4-112", "who": "Peter Gibbons", "wall_removed": false }, { "id": "4-114", "who": "Michael Bolton" }, { "id": "4-116", "who": "Samir Nagheenanajar" } ] },
+      { "row": "B", "cubicles": [ { "id": "4-118", "who": "Drew" }, { "id": "4-120", "who": "Brian" }, { "id": "4-122", "who": null, "note": "Was Milton's. Now a printer stand" } ] }
+    ],
+    "corner_office": { "who": "Bill Lumbergh", "window": true }
+  },
+  "basement": { "storage_room_b": { "who": "Milton Waddams", "window": "parking structure", "lights": "timer" } }
+}

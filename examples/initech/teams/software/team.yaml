@@ -1,0 +1,30 @@
+team: Software
+floor: 4
+manager: Bill Lumbergh
+dotted_line_managers: 7
+members:
+  - name: Peter Gibbons
+    role: Programmer
+    focus: Y2K remediation
+    cubicle: 4-112
+    status: increasingly relaxed
+  - name: Michael Bolton
+    role: Programmer
+    focus: Ledger, printing
+    cubicle: 4-114
+    note: No relation to the singer. Please stop asking.
+  - name: Samir Nagheenanajar
+    role: Programmer
+    focus: Interest calculation
+    cubicle: 4-116
+    note: The name is pronounced the way it is spelled.
+  - name: Drew
+    role: Programmer
+    focus: Reports
+    cubicle: 4-118
+  - name: Brian
+    role: Programmer
+    focus: Fax gateway
+    cubicle: 4-120
+on_call_rotation: weekly
+standup: "9:15, by the coffee machine"

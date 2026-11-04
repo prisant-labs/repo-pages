@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" font-family="Arial, sans-serif" font-size="13">
+  <title>Initech org chart</title>
+  <rect width="640" height="300" fill="#f7f7f5"/>
+  <g stroke="#8a8f99" stroke-width="2" fill="none">
+    <path d="M320 64 V96"/><path d="M320 136 V160 H70 V184 M320 160 H195 V184 M320 160 V184 M320 160 H445 V184 M320 160 H570 V184"/>
+    <path d="M520 44 H404" stroke-dasharray="6 5"/>
+  </g>
+  <g fill="#ffffff" stroke="#0f2a4a" stroke-width="2">
+    <rect x="240" y="24" width="160" height="40" rx="6"/><rect x="240" y="96" width="160" height="40" rx="6"/>
+    <rect x="10" y="184" width="120" height="40" rx="6"/><rect x="135" y="184" width="120" height="40" rx="6"/><rect x="260" y="184" width="120" height="40" rx="6"/><rect x="385" y="184" width="120" height="40" rx="6"/><rect x="510" y="184" width="120" height="40" rx="6"/>
+    <rect x="520" y="24" width="110" height="40" rx="6" stroke-dasharray="6 5"/>
+  </g>
+  <g text-anchor="middle" fill="#0f2a4a">
+    <text x="320" y="49">Dom Portwood, VP</text><text x="320" y="121">Bill Lumbergh</text>
+    <text x="70" y="209">Peter</text><text x="195" y="209">Michael</text><text x="320" y="209">Samir</text><text x="445" y="209">Tom</text><text x="570" y="209">Milton</text>
+    <text x="575" y="49">The Bobs</text>
+  </g>
+  <text x="320" y="270" text-anchor="middle" fill="#6b6f78" font-size="12">Plus seven dotted-line managers per engineer, not shown</text>
+</svg>

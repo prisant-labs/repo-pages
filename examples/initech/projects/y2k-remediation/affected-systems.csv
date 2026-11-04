@@ -1,0 +1,18 @@
+system,client,language,two_digit_fields,status,owner,notes
+General ledger,First Mutual,COBOL,14,fixed,Peter,Deployed
+General ledger,Penny Savings,COBOL,14,fixed,Peter,Deployed
+General ledger,Valley Federal,COBOL,16,fixed,Michael,Deployed
+Interest calculation,First Mutual,COBOL,9,in progress,Samir,
+Interest calculation,Penny Savings,COBOL,9,in progress,Samir,
+Interest calculation,Valley Federal,COBOL,11,not started,Samir,
+Statement printing,First Mutual,C,4,fixed,Michael,Printer still jams; unrelated
+Statement printing,Valley Federal,C,4,fixed,Michael,
+ATM network,Penny Savings,C,2,fixed,Peter,
+Loan origination,First Mutual,PL/I,22,in progress,Peter,Largest remaining
+Loan origination,Valley Federal,PL/I,19,not started,Peter,
+Overdraft fees,Penny Savings,COBOL,3,fixed,Michael,
+Wire transfers,First Mutual,C,5,fixed,Samir,
+Wire transfers,Penny Savings,C,5,fixed,Samir,
+Payroll export,Initech internal,BASIC,6,fixed,Michael,Milton's paychecks: see facilities
+Reporting warehouse,All clients,SQL,12,in progress,Peter,See find_two_digit_years.sql
+Fax gateway,Initech internal,unknown,1,won't fix,Nobody,It has always made that noise

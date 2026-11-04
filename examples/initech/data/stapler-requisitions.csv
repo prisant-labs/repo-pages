@@ -1,0 +1,10 @@
+request_id,requested_by,item,quantity,reason,status,handled_by,response
+R-001,Milton Waddams,red stapler,1,Mine was taken,pending,Facilities,Being looked into
+R-002,Milton Waddams,red stapler,1,Still missing,pending,Facilities,Forwarded to Bill
+R-003,Peter Gibbons,standard stapler,1,Jammed,fulfilled,Facilities,
+R-004,Milton Waddams,red stapler,1,I was told I could keep it,pending,Bill Lumbergh,Please use the standard stapler
+R-005,Michael Bolton,toner,1,Printer,denied,Facilities,Printer retired
+R-006,Milton Waddams,red stapler,1,Moved to storage room B without it,pending,Facilities,
+R-007,Samir Nagheenanajar,pens,1,Ran out,fulfilled,Facilities,
+R-008,Milton Waddams,pest control,1,Storage room B,pending,Facilities,Requested
+R-009,Milton Waddams,red stapler,1,It was found on Bill's desk,closed,Bill Lumbergh,Stapler returned to Milton

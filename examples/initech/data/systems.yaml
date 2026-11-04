@@ -1,0 +1,26 @@
+# Internal systems the software team runs.
+systems:
+  - name: TPS tracker
+    kind: spreadsheet
+    owner: Bill Lumbergh
+    criticality: absolute
+  - name: Payroll
+    kind: batch
+    owner: Accounting
+    criticality: high
+    known_issue: an employee can be removed from payroll without being told
+  - name: Fax gateway
+    kind: hardware
+    owner: Brian
+    criticality: low
+    noise: constant
+  - name: Fourth-floor printer
+    kind: hardware
+    owner: Michael Bolton
+    criticality: none
+    status: retired
+  - name: Intranet
+    kind: static site
+    owner: Software team
+    criticality: medium
+    source: this repository

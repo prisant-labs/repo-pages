@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 360" font-family="Arial, sans-serif" font-size="12">
+  <title>Fourth floor plan</title>
+  <rect width="600" height="360" fill="#fafaf7" stroke="#333" stroke-width="3"/>
+  <rect x="460" y="10" width="130" height="110" fill="#e8f0fa" stroke="#333"/><text x="525" y="68" text-anchor="middle">Corner office</text>
+  <rect x="10" y="10" width="140" height="80" fill="#f3efe4" stroke="#333"/><text x="80" y="54" text-anchor="middle">Break room</text>
+  <rect x="10" y="270" width="140" height="80" fill="#f3efe4" stroke="#333"/><text x="80" y="314" text-anchor="middle">Conference B</text>
+  <g fill="#fff" stroke="#777">
+    <rect x="190" y="150" width="70" height="60"/><rect x="260" y="150" width="70" height="60"/><rect x="330" y="150" width="70" height="60"/>
+    <rect x="190" y="230" width="70" height="60"/><rect x="260" y="230" width="70" height="60"/><rect x="330" y="230" width="70" height="60" fill="#fde8e8"/>
+  </g>
+  <g text-anchor="middle" font-size="11">
+    <text x="225" y="184">Peter</text><text x="295" y="184">Michael</text><text x="365" y="184">Samir</text>
+    <text x="225" y="264">Drew</text><text x="295" y="264">Brian</text><text x="365" y="258">Printer</text><text x="365" y="272">(was Milton)</text>
+  </g>
+  <rect x="470" y="300" width="110" height="40" fill="#fff3c4" stroke="#333"/><text x="525" y="324" text-anchor="middle">Stairs to B</text>
+</svg>

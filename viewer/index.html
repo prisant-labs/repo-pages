@@ -1,0 +1,1700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Repo browser</title>
+<!-- Apply the saved theme before first paint so dark-mode readers see no light flash. -->
+<script>
+  (function () {
+    try {
+      var t = JSON.parse(localStorage.getItem("rb.theme"));
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    font-size: 115%;
+    --nav-width: 300px;
+    --content-max-width: 1100px;
+    --md-max-width: 1600px; /* Markdown width at Normal; Narrow and Full are in the doc footer */
+    --md-text-scale: 1; /* Markdown text size; the doc footer's A- and A+ set it */
+    --tree-indent: 1.55rem; /* Tree nesting per level; the Settings modal sets it. Must be >= --tree-line-x */
+    --tree-line-x: calc(0.85rem + 6.5px); /* Guide-line x: folder row padding + half the 13px chevron */
+    --ui-scale: 1; /* Interface text size (panels, header, menus, doc footer); the Settings modal sets it */
+    --tree-scale: 1; /* Sidebar tree and list text size; the Settings modal sets it */
+    --tree-row-py: 0.22rem; /* Tree row padding; Settings > Row density sets it */
+    --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: #ffffff; --nav-bg: #f8f9fa; --nav-border: #e2e5e9; --accent: #2563eb;
+    --text: #1a1a1a; --text-muted: #6b7280; --surface: #ffffff;
+    --hover: rgba(0,0,0,0.04); --hover-accent: rgba(37,99,235,0.06);
+    --badge-bg: #e5e7eb; --input-bg: #ffffff;
+    --added-bg: #dcfce7; --added-text: #166534; --updated-bg: #dbeafe; --updated-text: #1e40af;
+    --code-bg: #f6f8fa; --mark: #fef08a;
+    --t-md: #2563eb; --t-html: #ea580c; --t-data: #059669; --t-code: #7c3aed; --t-media: #db2777; --t-other: #6b7280;
+    --tok-kw: #7c3aed; --tok-str: #047857; --tok-com: #9ca3af; --tok-num: #c2410c;
+    --scroll-thumb: rgba(0,0,0,0.2); --scroll-thumb-hover: rgba(0,0,0,0.38);
+    --zebra: rgba(0,0,0,0.022); --zebra-strong: rgba(0,0,0,0.045);
+    color-scheme: light;
+  }
+  [data-theme="dark"] {
+    --bg: #111111; --nav-bg: #1a1a1a; --nav-border: #2d2d2d; --accent: #60a5fa;
+    --text: #e5e5e5; --text-muted: #8b8b8b; --surface: #222222;
+    --hover: rgba(255,255,255,0.05); --hover-accent: rgba(96,165,250,0.1);
+    --badge-bg: #333333; --input-bg: #2a2a2a;
+    --added-bg: #14532d; --added-text: #86efac; --updated-bg: #1e3a5f; --updated-text: #93c5fd;
+    --code-bg: #1c1c1c; --mark: #854d0e;
+    --t-md: #60a5fa; --t-html: #fb923c; --t-data: #34d399; --t-code: #a78bfa; --t-media: #f472b6; --t-other: #9ca3af;
+    --tok-kw: #c4b5fd; --tok-str: #6ee7b7; --tok-com: #6b7280; --tok-num: #fdba74;
+    --scroll-thumb: rgba(255,255,255,0.16); --scroll-thumb-hover: rgba(255,255,255,0.32);
+    --zebra: rgba(255,255,255,0.022); --zebra-strong: rgba(255,255,255,0.045);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111111; --nav-bg: #1a1a1a; --nav-border: #2d2d2d; --accent: #60a5fa;
+      --text: #e5e5e5; --text-muted: #8b8b8b; --surface: #222222;
+      --hover: rgba(255,255,255,0.05); --hover-accent: rgba(96,165,250,0.1);
+      --badge-bg: #333333; --input-bg: #2a2a2a;
+      --added-bg: #14532d; --added-text: #86efac; --updated-bg: #1e3a5f; --updated-text: #93c5fd;
+      --code-bg: #1c1c1c; --mark: #854d0e;
+      --t-md: #60a5fa; --t-html: #fb923c; --t-data: #34d399; --t-code: #a78bfa; --t-media: #f472b6; --t-other: #9ca3af;
+      --tok-kw: #c4b5fd; --tok-str: #6ee7b7; --tok-com: #6b7280; --tok-num: #fdba74;
+      --scroll-thumb: rgba(255,255,255,0.16); --scroll-thumb-hover: rgba(255,255,255,0.32);
+      --zebra: rgba(255,255,255,0.022); --zebra-strong: rgba(255,255,255,0.045);
+      color-scheme: dark;
+    }
+  }
+  /* Scrollbars: thin and in theme colours. Chrome, Edge and Firefox use the two standard properties and
+     then ignore the ::-webkit-scrollbar rules; Safari before 18.2 uses the ::-webkit-scrollbar rules. */
+  * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scroll-thumb); border: 2px solid transparent; border-radius: 6px; background-clip: padding-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); background-clip: padding-box; }
+  /* Doc theme: a Markdown document can render light or dark whatever the interface theme is */
+  .doc-light {
+    --bg: #ffffff; --nav-bg: #f8f9fa; --nav-border: #e2e5e9; --accent: #2563eb;
+    --text: #1a1a1a; --text-muted: #6b7280; --surface: #ffffff;
+    --hover: rgba(0,0,0,0.04); --hover-accent: rgba(37,99,235,0.06); --badge-bg: #e5e7eb;
+    --code-bg: #f6f8fa; --tok-kw: #7c3aed; --tok-str: #047857; --tok-com: #9ca3af; --tok-num: #c2410c;
+    --scroll-thumb: rgba(0,0,0,0.2); --scroll-thumb-hover: rgba(0,0,0,0.38);
+    background: var(--bg); color: var(--text);
+  }
+  .doc-dark {
+    --bg: #111111; --nav-bg: #1a1a1a; --nav-border: #2d2d2d; --accent: #60a5fa;
+    --text: #e5e5e5; --text-muted: #8b8b8b; --surface: #222222;
+    --hover: rgba(255,255,255,0.05); --hover-accent: rgba(96,165,250,0.1); --badge-bg: #333333;
+    --code-bg: #1c1c1c; --tok-kw: #c4b5fd; --tok-str: #6ee7b7; --tok-com: #6b7280; --tok-num: #fdba74;
+    --scroll-thumb: rgba(255,255,255,0.16); --scroll-thumb-hover: rgba(255,255,255,0.32);
+    background: var(--bg); color: var(--text);
+  }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); background: var(--bg); line-height: 1.6; }
+  button { font-family: inherit; color: inherit; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .layout { display: flex; height: 100vh; }
+
+  /* Nav panel */
+  .nav-panel { position: relative; width: var(--nav-width); min-width: var(--nav-width); background: var(--nav-bg); display: flex; flex-direction: column; border-right: 1px solid var(--nav-border); transition: margin-left var(--transition), opacity var(--transition); z-index: 20; }
+  .nav-resize { position: absolute; top: 0; right: -3px; bottom: 0; width: 6px; cursor: col-resize; z-index: 25; touch-action: none; }
+  .nav-resize::after { content: ""; position: absolute; top: 0; bottom: 0; left: 2px; width: 2px; background: transparent; transition: background 0.15s; }
+  .nav-resize:hover::after, .nav-resize:focus-visible::after, .nav-panel.resizing .nav-resize::after { background: var(--accent); }
+  .nav-resize:focus-visible { outline: none; }
+  .nav-panel.resizing { transition: none; user-select: none; }
+  .nav-panel.floating .nav-resize { right: 0; }
+  .nav-panel.collapsed:not(.floating) .nav-resize { display: none; }
+  .nav-panel.collapsed { margin-left: calc(-1 * var(--nav-width)); opacity: 0; pointer-events: none; }
+  /* Browse: the collapsed panel floats over the page. Same element, so the docked and floating views cannot drift */
+  .nav-panel.collapsed.floating { position: fixed; left: 12px; top: 92px; height: calc(100vh - 104px); margin-left: 0; opacity: 1; pointer-events: auto; border: 1px solid var(--nav-border); border-radius: 10px; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08); z-index: 120; transition: none; animation: settings-modal-up 0.15s ease-out; }
+  .float-only { display: none; }
+  .nav-panel.floating .float-only { display: flex; }
+  .nav-panel.floating .dock-only { display: none; }
+  .nav-header { padding: 0.7rem 0.85rem; border-bottom: 1px solid var(--nav-border); display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .nav-header h2 { font-size: calc(0.78rem * var(--ui-scale)); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); line-height: 1.2; }
+  .file-count { font-size: calc(0.68rem * var(--ui-scale)); color: var(--text-muted); }
+  .collapse-btn { height: 26px; border: 1px solid var(--nav-border); border-radius: 6px; background: var(--surface); cursor: pointer; display: flex; align-items: center; gap: 0.25rem; padding: 0 0.5rem; font-size: calc(0.65rem * var(--ui-scale)); font-weight: 500; color: var(--text-muted); flex-shrink: 0; }
+  .collapse-btn:hover, .icon-btn:hover { background: var(--hover); border-color: var(--text-muted); }
+  .collapse-btn svg, .icon-btn svg { width: 14px; height: 14px; fill: var(--text-muted); }
+  .icon-btn { width: 26px; height: 26px; border: 1px solid var(--nav-border); border-radius: 6px; background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .icon-btn.active { border-color: var(--accent); background: var(--hover-accent); }
+  .icon-btn.active svg { fill: var(--accent); }
+  .nav-quick-links { display: flex; gap: 0.3rem; padding: 0.5rem 0.85rem; border-bottom: 1px solid var(--nav-border); flex-wrap: wrap; }
+  .nav-chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.22rem 0.55rem; border-radius: 6px; font-size: calc(0.62rem * var(--ui-scale)); font-weight: 500; color: var(--text-muted); background: var(--badge-bg); text-decoration: none; border: none; cursor: pointer; }
+  .nav-chip:hover { color: var(--accent); background: var(--hover-accent); }
+  .nav-chip svg { width: 11px; height: 11px; fill: currentColor; }
+  .nav-chip kbd { font-family: var(--mono); font-size: calc(0.55rem * var(--ui-scale)); opacity: 0.8; }
+  .nav-tabs { display: flex; border-bottom: 1px solid var(--nav-border); }
+  .nav-tab { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0.5rem 0.2rem; font-size: calc(0.66rem * var(--ui-scale)); font-weight: 600; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .nav-toolbar { padding: 0.45rem 0.85rem; border-bottom: 1px solid var(--nav-border); display: flex; flex-direction: column; gap: 0.35rem; }
+  .nav-toolbar input { width: 100%; padding: 0.28rem 0.5rem; border: 1px solid var(--nav-border); border-radius: 5px; font-size: calc(0.74rem * var(--ui-scale)); outline: none; background: var(--input-bg); color: var(--text); }
+  .nav-toolbar input:focus { border-color: var(--accent); }
+  .type-filter-group { display: flex; border: 1px solid var(--nav-border); border-radius: 5px; overflow: hidden; }
+  .type-filter-btn { flex: 1; font-size: calc(0.6rem * var(--ui-scale)); font-weight: 600; padding: 0.15rem 0.3rem; color: var(--text-muted); cursor: pointer; background: transparent; border: none; border-right: 1px solid var(--nav-border); }
+  .type-filter-btn:last-child { border-right: none; }
+  .type-filter-btn.active { background: var(--accent); color: #fff; }
+  .tree-actions { display: flex; gap: 0.4rem; font-size: calc(0.62rem * var(--ui-scale)); color: var(--text-muted); }
+  .tree-action { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: calc(0.62rem * var(--ui-scale)); }
+  .tree-action:hover { color: var(--accent); }
+  .nav-view { flex: 1; overflow-y: auto; padding: 0.35rem 0.4rem 1rem; isolation: isolate; } /* isolate: full-row stripes paint behind the guide lines, not behind the panel */
+  .nav-footer { display: flex; align-items: center; gap: 0.45rem; padding: 0.5rem 0.85rem; border-top: 1px solid var(--nav-border); font-size: calc(0.6rem * var(--ui-scale)); color: var(--text-muted); }
+  .nav-footer .build-stamp { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav-footer .build-stamp a { color: var(--text-muted); }
+
+  /* Tree. Nesting and guide lines follow the Settings modal (--tree-indent, --tree-line-x, --tree-scale).
+     Files start where folder names start: row padding + chevron + gap, plus the folder icon when icons are on. */
+  .nav-panel { --tree-chev: calc(13px * var(--tree-scale)); --tree-icon-w: 0px; }
+  .nav-panel.folder-icons { --tree-icon-w: calc(15px * var(--tree-scale) + 0.35rem); }
+  .tree-folder, .tree-file { position: relative; display: flex; align-items: center; padding: var(--tree-row-py) 0.85rem; cursor: pointer; border-radius: 4px; user-select: none; white-space: nowrap; }
+  .tree-folder { font-size: calc(0.78rem * var(--tree-scale)); font-weight: 600; }
+  .tree-file { font-size: calc(0.74rem * var(--tree-scale)); color: var(--text); gap: 0.35rem; padding-left: calc(0.85rem + var(--tree-chev) + 0.3rem + var(--tree-icon-w)); }
+  .wrap-names .tree-folder, .wrap-names .tree-file { white-space: normal; }
+  .wrap-names .tree-name { overflow-wrap: anywhere; min-width: 7em; } /* deep rows keep a readable column and scroll sideways, as unwrapped rows do */
+  /* Alternating rows: renderSidebar marks every other visible row .z-odd. The stripe is its own layer behind the row,
+     so a row's hover and active backgrounds add to it instead of replacing it */
+  .zebra .z-odd::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; right: 0; background: var(--zebra); border-radius: 4px; z-index: -1; pointer-events: none; }
+  .zebra.zebra-medium .z-odd::before { background: var(--zebra-strong); }
+  .zebra.zebra-full .z-odd::before { left: -400px; right: -0.4rem; border-radius: 0; }
+  .nav-view .tree-folder:hover, .nav-view .tree-file:hover, .nav-view .recent-item:hover { background: var(--hover); }
+  .nav-view .tree-file.active, .nav-view .tree-folder.active { background: var(--hover-accent); color: var(--accent); }
+  .tree-children { margin-left: var(--tree-line-x); padding-left: max(0px, calc(var(--tree-indent) - var(--tree-line-x))); border-left: 1px solid var(--nav-border); }
+  .no-guide-lines .tree-children { border-left-color: transparent; }
+  .tree-children.closed { display: none; }
+  .chev { width: 13px; height: 13px; margin-right: 0.3rem; fill: var(--text-muted); transition: transform 0.15s; flex-shrink: 0; }
+  .tree-folder .chev { width: var(--tree-chev); height: var(--tree-chev); }
+  .open > .chev { transform: rotate(90deg); }
+  /* Folder icons: closed and open shapes are both in the row; the folder's .open class picks one */
+  .ficon { width: calc(15px * var(--tree-scale)); height: calc(15px * var(--tree-scale)); margin-right: 0.35rem; flex-shrink: 0; color: var(--text-muted); }
+  .icon-accent .ficon { color: var(--accent); }
+  .ficon.outline { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linejoin: round; stroke-linecap: round; }
+  .ficon.filled { fill: currentColor; }
+  .ficon.filled .back { opacity: 0.5; }
+  .tree-folder .ficon.is-open, .tree-folder.open .ficon.is-closed { display: none; }
+  .tree-folder.open .ficon.is-open { display: block; }
+  .tree-name { overflow: hidden; text-overflow: ellipsis; }
+  .count-badge { margin-left: auto; font-size: calc(0.58rem * var(--ui-scale)); color: var(--text-muted); background: var(--badge-bg); padding: 0 0.38rem; border-radius: 8px; font-weight: 500; flex-shrink: 0; }
+  .nav-view .count-badge { font-size: calc(0.58rem * var(--tree-scale)); }
+  .no-folder-counts .nav-view .count-badge, .no-type-badges .nav-view .tbadge { display: none; }
+  .tbadge { font-family: var(--mono); font-size: 0.5rem; font-weight: 700; padding: 0.02rem 0.2rem; border-radius: 3px; color: #fff; flex-shrink: 0; min-width: 1.85rem; text-align: center; letter-spacing: 0.02em; }
+  .g-md { background: var(--t-md); } .g-html { background: var(--t-html); } .g-data { background: var(--t-data); } .g-code { background: var(--t-code); } .g-media { background: var(--t-media); } .g-other { background: var(--t-other); }
+  [data-theme="dark"] .tbadge { color: #111; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tbadge { color: #111; } }
+  .pair-dot { font-size: 0.55rem; color: var(--text-muted); border: 1px solid var(--nav-border); border-radius: 3px; padding: 0 0.2rem; }
+
+  .group-head { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); padding: 0.6rem 0.5rem 0.2rem; }
+  .commit-head { padding: 0.55rem 0.5rem 0.25rem; border-top: 1px solid var(--nav-border); margin-top: 0.3rem; }
+  .commit-head:first-child { border-top: none; margin-top: 0; }
+  .commit-msg { font-size: 0.72rem; font-weight: 600; line-height: 1.35; }
+  .commit-meta { font-size: 0.6rem; color: var(--text-muted); font-family: var(--mono); }
+  .recent-item { padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; display: flex; gap: 0.4rem; align-items: flex-start; }
+  .recent-item:hover { background: var(--hover); }
+  .recent-name { font-size: 0.74rem; line-height: 1.3; word-break: break-word; }
+  .recent-path { font-size: 0.6rem; color: var(--text-muted); line-height: 1.3; word-break: break-word; }
+  .act { font-size: 0.52rem; font-weight: 700; text-transform: uppercase; padding: 0.02rem 0.3rem; border-radius: 3px; margin-left: auto; flex-shrink: 0; }
+  .act.added { background: var(--added-bg); color: var(--added-text); }
+  .act.updated { background: var(--updated-bg); color: var(--updated-text); }
+  .empty-note { font-size: 0.72rem; color: var(--text-muted); padding: 1rem 0.6rem; }
+  /* Sidebar lists follow Settings > Tree text; the same classes elsewhere (home, palette) keep their sizes */
+  .nav-view .tbadge { font-size: calc(0.5rem * var(--tree-scale)); }
+  .nav-view .pair-dot { font-size: calc(0.55rem * var(--tree-scale)); }
+  .nav-view .group-head { font-size: calc(0.66rem * var(--tree-scale)); }
+  .nav-view .commit-msg { font-size: calc(0.72rem * var(--tree-scale)); }
+  .nav-view .commit-meta { font-size: calc(0.6rem * var(--tree-scale)); }
+  .nav-view .recent-item { position: relative; }
+  .nav-view .recent-name { font-size: calc(0.74rem * var(--tree-scale)); }
+  .nav-view .recent-path { font-size: calc(0.6rem * var(--tree-scale)); }
+  .nav-view .act { font-size: calc(0.52rem * var(--tree-scale)); }
+  .nav-view .empty-note { font-size: calc(0.72rem * var(--tree-scale)); }
+
+  /* Settings modal (opened by the gear in the nav footer) */
+  .settings-backdrop { position: absolute; inset: 0; z-index: 100; display: none; }
+  .settings-backdrop.open { display: block; }
+  .settings-modal { position: absolute; bottom: calc(0.5rem + 26px + 0.5rem); left: 0.85rem; width: calc(var(--nav-width) - 1.7rem); max-height: calc(100% - 26px - 1.6rem); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--nav-border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08); overflow: hidden; animation: settings-modal-up 0.18s cubic-bezier(0.4, 0, 0.2, 1); }
+  @keyframes settings-modal-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .settings-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 0.75rem 0.5rem; border-bottom: 1px solid var(--nav-border); flex-shrink: 0; }
+  .settings-modal-title { font-size: calc(0.72rem * var(--ui-scale)); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .settings-modal-close { width: 20px; height: 20px; border: none; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 4px; color: var(--text-muted); }
+  .settings-modal-close:hover { background: var(--hover); color: var(--text); }
+  .settings-modal-close svg { width: 12px; height: 12px; fill: currentColor; }
+  /* The body scrolls once the settings are taller than the panel, so the popover never runs off the top */
+  .settings-modal-body { padding: 0.65rem 0.75rem 0.8rem; display: flex; flex-direction: column; gap: 0.8rem; overflow-y: auto; min-height: 0; }
+  .settings-modal-section { font-size: calc(0.6rem * var(--ui-scale)); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); padding-bottom: 0.3rem; border-bottom: 1px solid var(--nav-border); margin-top: 0.15rem; }
+  .settings-row { display: flex; flex-direction: column; gap: 0.35rem; }
+  .settings-label { font-size: calc(0.72rem * var(--ui-scale)); font-weight: 600; color: var(--text); }
+  .settings-label-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .settings-value { font-size: calc(0.62rem * var(--ui-scale)); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  .settings-hint { font-size: calc(0.6rem * var(--ui-scale)); color: var(--text-muted); line-height: 1.4; margin-top: -0.1rem; }
+  /* Options that belong to a toggle sit under it, shown only while it is on */
+  .settings-sub { display: flex; flex-direction: column; gap: 0.55rem; margin: -0.35rem 0 0 0.2rem; padding: 0.15rem 0 0.1rem 0.65rem; border-left: 2px solid var(--nav-border); }
+  .settings-sub .settings-label { font-size: calc(0.66rem * var(--ui-scale)); color: var(--text-muted); }
+  /* Equal-width options that wrap onto a second line when larger interface text no longer fits them */
+  .indent-track { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  .indent-opt { flex: 1 0 0; min-width: max-content; white-space: nowrap; padding: 0.3rem 0.4rem; border: 1px solid var(--nav-border); border-radius: 5px; background: var(--surface); font-size: calc(0.62rem * var(--ui-scale)); font-weight: 600; color: var(--text-muted); cursor: pointer; text-align: center; }
+  .indent-opt:hover { background: var(--hover); border-color: var(--text-muted); }
+  .indent-opt.selected { background: var(--hover-accent); border-color: var(--accent); color: var(--accent); }
+  .custom-indent-row { display: flex; align-items: center; justify-content: space-between; padding: 0.28rem 0.5rem; background: var(--hover); border: 1px solid var(--nav-border); border-radius: 5px; }
+  .custom-indent-row[hidden] { display: none; }
+  .custom-indent-label { font-size: calc(0.63rem * var(--ui-scale)); font-weight: 600; color: var(--text-muted); }
+  .custom-indent-input-wrap { display: flex; align-items: center; gap: 0.25rem; }
+  .custom-indent-input-wrap input { width: 54px; padding: 0.18rem 0.35rem; border: 1px solid var(--nav-border); border-radius: 4px; font-size: calc(0.68rem * var(--ui-scale)); font-family: inherit; background: var(--input-bg); color: var(--text); outline: none; text-align: right; }
+  .custom-indent-input-wrap input:focus { border-color: var(--accent); }
+  .custom-indent-unit { font-size: calc(0.63rem * var(--ui-scale)); color: var(--text-muted); }
+  .settings-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .settings-toggle-name { font-size: calc(0.72rem * var(--ui-scale)); font-weight: 600; color: var(--text); }
+  .settings-toggle { width: 34px; height: 20px; background: var(--nav-border); border-radius: 10px; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; border: none; }
+  .settings-toggle.on { background: var(--accent); }
+  .settings-toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .settings-toggle.on::after { left: 16px; }
+  .settings-modal-footer { display: flex; justify-content: flex-end; padding: 0.45rem 0.75rem; border-top: 1px solid var(--nav-border); flex-shrink: 0; }
+  .settings-stepper { display: flex; align-items: center; gap: 0.3rem; }
+  .settings-stepper button { min-width: 30px; height: 24px; border: 1px solid var(--nav-border); border-radius: 5px; background: var(--surface); color: var(--text-muted); cursor: pointer; font-size: calc(0.66rem * var(--ui-scale)); font-weight: 600; }
+  .settings-stepper button:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }
+  .settings-stepper button:disabled { opacity: 0.4; cursor: default; }
+  .settings-stepper .settings-value { flex: 1; text-align: center; font-weight: 600; color: var(--text); }
+  .settings-reset { font-size: calc(0.62rem * var(--ui-scale)); font-weight: 500; color: var(--text-muted); background: none; border: none; cursor: pointer; }
+  .settings-reset:hover { color: var(--accent); }
+
+  /* Main */
+  .main-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .header-row-1 { display: flex; align-items: center; height: 44px; padding: 0 1rem; border-bottom: 1px solid var(--nav-border); gap: 0.4rem; flex-shrink: 0; }
+  .header-row-2 { display: flex; align-items: center; min-height: 42px; padding: 0 1rem; border-bottom: 1px solid var(--nav-border); background: var(--nav-bg); gap: 0.45rem; flex-shrink: 0; overflow-x: auto; }
+  .home-icon-btn { height: 28px; border: 1px solid var(--nav-border); border-radius: 5px; background: none; cursor: pointer; display: flex; align-items: center; gap: 0.3rem; color: var(--text-muted); padding: 0 0.5rem; font-size: calc(0.7rem * var(--ui-scale)); font-weight: 500; flex-shrink: 0; }
+  .home-icon-btn svg { width: 14px; height: 14px; fill: currentColor; }
+  .home-icon-btn:hover { background: var(--hover); }
+  .site-title-text { font-size: calc(0.9rem * var(--ui-scale)); font-weight: 700; white-space: nowrap; cursor: pointer; }
+  .header-sep { width: 1px; height: 18px; background: var(--nav-border); margin: 0 0.25rem; }
+  /* A long trail scrolls sideways, kept scrolled to the deepest folder */
+  .breadcrumb { display: flex; align-items: center; font-size: calc(0.76rem * var(--ui-scale)); color: var(--text-muted); white-space: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+  .breadcrumb::-webkit-scrollbar { display: none; }
+  .crumb { font: inherit; color: inherit; background: none; border: none; cursor: pointer; padding: 2px 3px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
+  .crumb:hover, .crumb.open { color: var(--accent); background: var(--hover-accent); }
+  .breadcrumb .sep { margin: 0 0.15rem; opacity: 0.5; flex-shrink: 0; }
+
+  /* Dropdown menu: breadcrumb folders and the file counter's quick-jump list share it */
+  .menu { display: none; position: fixed; z-index: 150; min-width: 240px; max-width: calc(100vw - 16px); max-height: min(70vh, 700px); overflow-y: auto; background: var(--surface); border: 1px solid var(--nav-border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); padding: 0.3rem; }
+  .menu.show { display: block; }
+  .menu-item { display: flex; align-items: center; gap: 0.45rem; padding: 0.28rem 0.6rem; font-size: calc(0.76rem * var(--ui-scale)); border-radius: 5px; cursor: pointer; white-space: nowrap; }
+  .menu-item:hover, .menu-item:focus { background: var(--hover-accent); color: var(--accent); outline: none; }
+  .menu-item.current { background: var(--hover-accent); color: var(--accent); font-weight: 600; }
+  .menu-item .tree-name { flex: 1; min-width: 0; }
+  .menu-item > svg { width: 14px; height: 14px; fill: var(--text-muted); flex-shrink: 0; }
+  .menu-num { font-family: var(--mono); font-size: calc(0.6rem * var(--ui-scale)); color: var(--text-muted); min-width: 1.4rem; text-align: right; flex-shrink: 0; }
+  .menu-sep { height: 1px; background: var(--nav-border); margin: 0.25rem 0.3rem; }
+  .header-spacer { flex: 1; }
+  .search-trigger { height: 28px; display: flex; align-items: center; gap: 0.4rem; border: 1px solid var(--nav-border); border-radius: 6px; background: var(--input-bg); color: var(--text-muted); font-size: calc(0.7rem * var(--ui-scale)); padding: 0 0.55rem; cursor: pointer; min-width: 170px; }
+  .search-trigger svg { width: 13px; height: 13px; fill: currentColor; }
+  .search-trigger kbd { margin-left: auto; font-family: var(--mono); font-size: calc(0.6rem * var(--ui-scale)); border: 1px solid var(--nav-border); border-radius: 3px; padding: 0 0.25rem; }
+  .share-btn { display: flex; align-items: center; gap: 0.3rem; padding: 3px 12px; border: 1px solid var(--accent); border-radius: 6px; background: transparent; cursor: pointer; font-size: calc(0.72rem * var(--ui-scale)); color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .share-btn:hover { background: var(--accent); color: #fff; }
+  .share-btn svg { width: 13px; height: 13px; fill: currentColor; }
+  .nav-reopen, .arrow-btn { width: 28px; height: 28px; border: 1px solid var(--nav-border); border-radius: 5px; background: var(--surface); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-muted); flex-shrink: 0; }
+  .nav-reopen svg, .arrow-btn svg { width: 15px; height: 15px; }
+  .arrow-btn:disabled { opacity: 0.4; cursor: default; }
+  .file-counter { font-size: calc(0.66rem * var(--ui-scale)); color: var(--text-muted); font-family: var(--mono); white-space: nowrap; }
+  button.file-counter { height: 28px; padding: 0 0.6rem; border: 1px solid var(--nav-border); border-radius: 5px; background: var(--surface); cursor: pointer; flex-shrink: 0; }
+  button.file-counter:hover, button.file-counter.open { border-color: var(--accent); color: var(--accent); background: var(--hover-accent); }
+  .browse-btn { display: none; height: 28px; align-items: center; gap: 0.3rem; padding: 0 0.55rem; border: 1px solid var(--nav-border); border-radius: 5px; background: var(--surface); color: var(--text-muted); font-size: calc(0.7rem * var(--ui-scale)); font-weight: 500; cursor: pointer; flex-shrink: 0; }
+  .browse-btn svg { width: 13px; height: 13px; fill: currentColor; }
+  .browse-btn:hover { border-color: var(--text-muted); color: var(--text); }
+  .browse-btn.active { border-color: var(--accent); color: var(--accent); background: var(--hover-accent); }
+  .nav-collapsed .browse-btn { display: flex; }
+  .primary-filename { font-size: calc(0.82rem * var(--ui-scale)); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .info-wrap { position: relative; }
+  .info-icon { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--text-muted); background: none; color: var(--text-muted); font-size: calc(0.6rem * var(--ui-scale)); font-weight: 700; font-style: italic; font-family: Georgia, serif; cursor: pointer; }
+  .info-popover { display: none; position: fixed; z-index: 50; background: var(--surface); border: 1px solid var(--nav-border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); padding: 0.6rem 0.75rem; min-width: 300px; max-width: min(520px, calc(100vw - 32px)); font-size: calc(0.7rem * var(--ui-scale)); }
+  .info-popover.show { display: block; }
+  .info-row { display: grid; grid-template-columns: 70px 1fr; gap: 0.5rem; padding: 0.15rem 0; }
+  .info-row span:first-child { color: var(--text-muted); }
+  .info-row code { font-family: var(--mono); font-size: calc(0.66rem * var(--ui-scale)); word-break: break-all; }
+  .row2-right { margin-left: auto; display: flex; align-items: center; gap: 0.35rem; }
+  .src-link { display: inline-flex; align-items: center; gap: 0.25rem; font-size: calc(0.68rem * var(--ui-scale)); color: var(--text-muted); text-decoration: none; padding: 0.15rem 0.45rem; border-radius: 5px; border: 1px solid transparent; white-space: nowrap; cursor: pointer; background: none; }
+  .src-link:hover { border-color: var(--nav-border); color: var(--accent); background: var(--surface); }
+  .src-link svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
+  .seg { display: flex; border: 1px solid var(--nav-border); border-radius: 6px; overflow: hidden; }
+  .seg button { font-size: calc(0.64rem * var(--ui-scale)); font-weight: 600; padding: 0.2rem 0.5rem; background: var(--surface); border: none; border-right: 1px solid var(--nav-border); cursor: pointer; color: var(--text-muted); }
+  .seg button:last-child { border-right: none; }
+  .seg button.active { background: var(--accent); color: #fff; }
+
+  .main-body { flex: 1; min-height: 0; overflow: auto; position: relative; }
+  .page { padding: 2rem 2.5rem 4rem; max-width: var(--content-max-width); }
+  .loading { padding: 2rem 2.5rem; font-size: 0.78rem; color: var(--text-muted); }
+  .error-banner { margin: 1.5rem 2.5rem; padding: 0.8rem 1rem; border: 1px solid #f59e0b; background: rgba(245,158,11,0.1); border-radius: 8px; font-size: 0.78rem; }
+
+  /* Home */
+  .home-title { font-size: 1.3rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .home-lede { font-size: 0.88rem; color: var(--text-muted); max-width: 46rem; }
+  .stat-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1.2rem 0 1.6rem; }
+  .stat { border: 1px solid var(--nav-border); border-radius: 8px; padding: 0.45rem 0.75rem; background: var(--surface); cursor: pointer; min-width: 92px; text-align: left; }
+  .stat:hover { border-color: var(--accent); }
+  .stat b { display: block; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 0.64rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.3rem; }
+  .stat i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .home-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 1.8rem; }
+  .home-col h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: 0.4rem; border-bottom: 1px solid var(--nav-border); padding-bottom: 0.3rem; }
+  .home-file { display: flex; gap: 0.5rem; align-items: flex-start; padding: 0.35rem 0.4rem; border-radius: 6px; cursor: pointer; }
+  .home-file:hover { background: var(--hover); }
+  .home-file .recent-name { font-size: 0.8rem; }
+  .home-file .when { margin-left: auto; font-size: 0.62rem; color: var(--text-muted); white-space: nowrap; }
+  .folder-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.6rem; margin-bottom: 1.8rem; }
+  .folder-card { border: 1px solid var(--nav-border); border-radius: 8px; padding: 0.6rem 0.75rem; cursor: pointer; background: var(--surface); }
+  .folder-card:hover { border-color: var(--accent); }
+  .folder-card b { font-size: 0.8rem; display: flex; align-items: center; gap: 0.35rem; }
+  .folder-card b svg { width: 14px; height: 14px; fill: var(--text-muted); }
+  .folder-card span { font-size: 0.64rem; color: var(--text-muted); }
+  .section-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin: 0 0 0.5rem; }
+
+  /* Folder page */
+  .readme-card { border: 1px solid var(--nav-border); border-radius: 8px; margin-bottom: 1.4rem; overflow: hidden; }
+  .readme-card .readme-head { font-size: 0.66rem; font-weight: 600; color: var(--text-muted); padding: 0.35rem 0.8rem; background: var(--nav-bg); border-bottom: 1px solid var(--nav-border); display: flex; gap: 0.4rem; align-items: center; }
+  .readme-card .md-body { padding: 1rem 1.2rem; }
+  table.files { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+  table.files th { text-align: left; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); font-weight: 700; padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--nav-border); }
+  table.files td { padding: 0.38rem 0.5rem; border-bottom: 1px solid var(--nav-border); vertical-align: middle; }
+  table.files tr.row { cursor: pointer; }
+  table.files tr.row:hover td { background: var(--hover); }
+  table.files td.num, table.files th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  table.files .muted { color: var(--text-muted); font-size: 0.68rem; }
+  .namecell { display: flex; align-items: center; gap: 0.45rem; word-break: break-word; }
+  .namecell svg { width: 15px; height: 15px; fill: var(--text-muted); flex-shrink: 0; }
+
+  /* Markdown. Every size multiplies --md-text-scale, so 100% renders the base sizes */
+  .doc-page { min-height: 100%; display: flex; flex-direction: column; }
+  .doc-wrap { flex: 1; display: flex; gap: 2rem; align-items: flex-start; padding: 2rem 2.5rem 3rem; }
+  .doc-wrap .md-body { flex: 1; min-width: 0; max-width: var(--md-max-width); }
+  [data-md-width="narrow"] .doc-wrap .md-body { max-width: 720px; }
+  [data-md-width="full"] .doc-wrap .md-body { max-width: none; }
+  .doc-meta { font-size: 0.68rem; color: var(--text-muted); margin-bottom: 1rem; display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+  .doc-meta .tag { background: var(--badge-bg); border-radius: 10px; padding: 0 0.45rem; }
+  .toc { position: sticky; top: 1rem; width: 280px; min-width: 280px; max-height: calc(100vh - 140px); overflow-y: auto; font-size: 0.7rem; border-left: 1px solid var(--nav-border); padding-left: 0.8rem; }
+  .toc h4 { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.3rem; }
+  .toc a { display: block; color: var(--text-muted); text-decoration: none; padding: 0.12rem 0; line-height: 1.35; }
+  .toc a:hover, .toc a.active { color: var(--accent); }
+  .toc a.l3 { padding-left: 0.8rem; }
+  .toc.hidden { display: none; }
+  @media (max-width: 960px) { .toc { display: none; } }
+  .md-body { font-size: calc(0.86rem * var(--md-text-scale)); line-height: 1.7; overflow-wrap: break-word; }
+  .md-body h1 { font-size: calc(1.5rem * var(--md-text-scale)); line-height: 1.25; margin: 0 0 0.8rem; }
+  .md-body h2 { font-size: calc(1.12rem * var(--md-text-scale)); margin: 1.8rem 0 0.5rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--nav-border); }
+  .md-body h3 { font-size: calc(0.95rem * var(--md-text-scale)); margin: 1.3rem 0 0.4rem; }
+  .md-body h4, .md-body h5, .md-body h6 { font-size: calc(0.86rem * var(--md-text-scale)); margin: 1.1rem 0 0.3rem; }
+  .md-body p, .md-body ul, .md-body ol, .md-body table, .md-body pre, .md-body blockquote { margin: 0 0 0.9rem; }
+  .md-body ul, .md-body ol { padding-left: 1.4rem; }
+  .md-body li { margin: 0.15rem 0; }
+  .md-body li > ul, .md-body li > ol { margin-bottom: 0; }
+  .md-body img { max-width: 100%; }
+  .md-body code { font-family: var(--mono); font-size: 0.8em; background: var(--code-bg); padding: 0.1em 0.35em; border-radius: 4px; }
+  .md-body pre { background: var(--code-bg); border: 1px solid var(--nav-border); border-radius: 8px; padding: 0.8rem 1rem; overflow-x: auto; tab-size: 4; }
+  .md-body pre code { background: none; padding: 0; font-size: calc(0.74rem * var(--md-text-scale)); line-height: 1.55; }
+  .md-body table { border-collapse: collapse; font-size: calc(0.78rem * var(--md-text-scale)); display: block; overflow-x: auto; }
+  .md-body th, .md-body td { border: 1px solid var(--nav-border); padding: 0.35rem 0.65rem; text-align: left; vertical-align: top; }
+  .md-body th { background: var(--nav-bg); }
+  .md-body blockquote { border-left: 3px solid var(--accent); padding: 0.2rem 0.9rem; color: var(--text-muted); background: var(--hover-accent); border-radius: 0 6px 6px 0; }
+  .md-body blockquote > :last-child { margin-bottom: 0; }
+  .md-body hr { border: none; border-top: 1px solid var(--nav-border); margin: 1.5rem 0; }
+  .md-body .mermaid-label { font-size: 0.64rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+  .md-plain { white-space: pre-wrap; font-family: var(--mono); font-size: 0.74rem; }
+
+  /* Markdown reader controls (doc footer) */
+  .md-footer { position: sticky; bottom: 0; margin-top: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.4rem 0.9rem; padding: 0.35rem 1rem; border-top: 1px solid var(--nav-border); background: var(--nav-bg); font-size: calc(0.64rem * var(--ui-scale)); color: var(--text-muted); z-index: 2; }
+  .md-footer-group { display: inline-flex; align-items: center; gap: 0.3rem; }
+  .md-footer-sep { width: 1px; height: 16px; background: var(--nav-border); }
+  .md-footer button { min-width: 26px; height: 24px; padding: 0 0.35rem; border: 1px solid var(--nav-border); border-radius: 5px; background: var(--surface); color: var(--text-muted); cursor: pointer; font-size: calc(0.66rem * var(--ui-scale)); font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+  .md-footer button:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }
+  .md-footer button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .md-footer button:disabled { opacity: 0.4; cursor: default; }
+  .md-footer button svg { width: 14px; height: 14px; fill: currentColor; }
+  .md-text-pct { min-width: 2.6rem; text-align: center; font-variant-numeric: tabular-nums; }
+
+  /* Code */
+  .code-view { font-family: var(--mono); font-size: 0.74rem; line-height: 1.6; padding: 0.8rem 0; }
+  .code-line { display: flex; white-space: pre; tab-size: 4; }
+  .code-line:hover { background: var(--hover); }
+  .code-line .ln { width: 3.4rem; text-align: right; padding-right: 1rem; color: var(--text-muted); opacity: 0.6; user-select: none; flex-shrink: 0; }
+  .tok-kw { color: var(--tok-kw); font-weight: 600; } .tok-str { color: var(--tok-str); } .tok-com { color: var(--tok-com); font-style: italic; } .tok-num { color: var(--tok-num); }
+  .cap-note { font-size: 0.7rem; color: var(--text-muted); padding: 0.6rem 1.5rem; }
+
+  /* CSV */
+  .csv-wrap { padding: 1rem 1.5rem 3rem; }
+  .csv-bar { display: flex; gap: 0.6rem; align-items: center; margin-bottom: 0.7rem; font-size: 0.7rem; color: var(--text-muted); flex-wrap: wrap; }
+  .csv-bar input { padding: 0.28rem 0.5rem; border: 1px solid var(--nav-border); border-radius: 5px; font-size: 0.72rem; background: var(--input-bg); color: var(--text); width: 220px; outline: none; }
+  .csv-bar input:focus { border-color: var(--accent); }
+  table.grid { border-collapse: collapse; font-size: 0.74rem; min-width: 60%; }
+  table.grid th { position: sticky; top: 0; background: var(--nav-bg); font-weight: 700; text-align: left; padding: 0.35rem 0.7rem; border: 1px solid var(--nav-border); cursor: pointer; white-space: nowrap; user-select: none; }
+  table.grid th:hover { color: var(--accent); }
+  table.grid td { padding: 0.3rem 0.7rem; border: 1px solid var(--nav-border); white-space: nowrap; max-width: 40rem; overflow: hidden; text-overflow: ellipsis; }
+  table.grid td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.grid tr:nth-child(even) td { background: var(--hover); }
+  table.grid .rownum { color: var(--text-muted); font-size: 0.64rem; text-align: right; }
+
+  /* JSON */
+  .json-view { font-family: var(--mono); font-size: 0.74rem; padding: 1rem 1.5rem; line-height: 1.7; }
+  .json-view details { margin-left: 1.1rem; }
+  .json-view summary { cursor: pointer; margin-left: -1.1rem; list-style: none; }
+  .json-view summary::-webkit-details-marker { display: none; }
+  .json-view summary::before { content: "\25B8  "; color: var(--text-muted); }
+  .json-view details[open] > summary::before { content: "\25BE  "; }
+  .json-view .k { color: var(--tok-kw); } .json-view .s { color: var(--tok-str); } .json-view .n { color: var(--tok-num); } .json-view .dim { color: var(--text-muted); }
+  .json-view .leaf { margin-left: 1.1rem; word-break: break-word; }
+
+  /* HTML, media, other */
+  .html-split { display: flex; height: 100%; }
+  .html-frame-wrap { flex: 1; min-width: 0; position: relative; background: #fff; }
+  .html-frame-wrap iframe { border: none; width: 100%; height: 100%; display: block; }
+  .notes-side { width: 500px; flex-shrink: 0; border-left: 1px solid var(--nav-border); overflow-y: auto; display: flex; flex-direction: column; background: var(--bg); }
+  .notes-side .notes-inner { flex: 1; padding: 1.2rem 1.4rem; }
+  .notes-side .md-body { font-size: calc(0.86rem * 0.9 * var(--md-text-scale)); }
+  .pdf-frame { border: none; width: 100%; height: 100%; display: block; }
+  .media-view { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; gap: 0.8rem; min-height: 100%; background-image: linear-gradient(45deg, var(--hover) 25%, transparent 25%), linear-gradient(-45deg, var(--hover) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, var(--hover) 75%), linear-gradient(-45deg, transparent 75%, var(--hover) 75%); background-size: 20px 20px; background-position: 0 0, 0 10px, 10px -10px, -10px 0; }
+  .media-view img { max-width: 100%; transition: transform 0.15s; background: #fff; border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,0.1); }
+  .file-card { margin: 3rem auto; max-width: 420px; border: 1px solid var(--nav-border); border-radius: 10px; padding: 1.4rem 1.6rem; text-align: center; background: var(--surface); }
+  .file-card .big { font-size: 2.4rem; line-height: 1; margin-bottom: 0.6rem; }
+  .file-card h3 { font-size: 0.95rem; margin-bottom: 0.2rem; word-break: break-all; }
+  .file-card p { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 1rem; }
+  .btn { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.72rem; font-weight: 600; padding: 0.35rem 0.8rem; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; text-decoration: none; }
+  .btn.ghost { background: transparent; color: var(--accent); }
+  .text-view { font-family: var(--mono); font-size: 0.76rem; white-space: pre-wrap; padding: 1.2rem 1.5rem; word-break: break-word; }
+
+  /* Search */
+  .palette-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 100; align-items: flex-start; justify-content: center; padding-top: 12vh; }
+  .palette-backdrop.show { display: flex; }
+  .palette { width: min(640px, calc(100vw - 32px)); background: var(--surface); border: 1px solid var(--nav-border); border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); overflow: hidden; }
+  .palette input { width: 100%; border: none; border-bottom: 1px solid var(--nav-border); padding: 0.85rem 1rem; font-size: calc(0.9rem * var(--ui-scale)); background: transparent; color: var(--text); outline: none; }
+  .palette-list { max-height: 50vh; overflow-y: auto; padding: 0.3rem; }
+  .palette-item { display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.45rem 0.6rem; border-radius: 7px; cursor: pointer; }
+  .palette-item.sel { background: var(--hover-accent); }
+  .palette-item .snip { font-size: calc(0.66rem * var(--ui-scale)); color: var(--text-muted); line-height: 1.4; margin-top: 0.1rem; }
+  .palette-foot { display: flex; gap: 1rem; justify-content: space-between; font-size: calc(0.6rem * var(--ui-scale)); color: var(--text-muted); padding: 0.4rem 0.8rem; border-top: 1px solid var(--nav-border); background: var(--nav-bg); }
+  .palette-foot kbd { font-family: var(--mono); border: 1px solid var(--nav-border); border-radius: 3px; padding: 0 0.25rem; }
+  mark { background: var(--mark); color: inherit; border-radius: 2px; padding: 0 1px; }
+  .search-page .search-box { display: flex; gap: 0.5rem; margin-bottom: 0.8rem; }
+  .search-page .search-box input { flex: 1; padding: 0.55rem 0.8rem; font-size: 0.9rem; border: 1px solid var(--nav-border); border-radius: 8px; background: var(--input-bg); color: var(--text); outline: none; }
+  .search-page .search-box input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--hover-accent); }
+  .facets { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.5rem; }
+  .facet { font-size: 0.66rem; padding: 0.15rem 0.6rem; border-radius: 12px; border: 1px solid var(--nav-border); background: var(--surface); cursor: pointer; color: var(--text-muted); }
+  .facet.active { border-color: var(--accent); color: var(--accent); background: var(--hover-accent); font-weight: 600; }
+  .facet-label { font-size: 0.62rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 700; margin-right: 0.2rem; align-self: center; }
+  .result-count { font-size: 0.7rem; color: var(--text-muted); margin: 0.9rem 0 0.4rem; }
+  .result { padding: 0.75rem 0.8rem; border-radius: 8px; cursor: pointer; border: 1px solid transparent; }
+  .result:hover { border-color: var(--nav-border); background: var(--surface); }
+  .result-title { display: flex; gap: 0.5rem; align-items: center; font-size: 0.86rem; font-weight: 600; color: var(--accent); }
+  .result-path { font-size: 0.64rem; color: var(--text-muted); font-family: var(--mono); margin: 0.1rem 0 0.25rem; word-break: break-all; }
+  .result-snip { font-size: 0.74rem; line-height: 1.5; }
+  .result-meta { font-size: 0.62rem; color: var(--text-muted); margin-top: 0.25rem; }
+
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); font-size: calc(0.72rem * var(--ui-scale)); padding: 0.4rem 0.9rem; border-radius: 8px; opacity: 0; transition: all 0.2s; pointer-events: none; z-index: 200; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 860px) {
+    .nav-panel, .nav-panel.collapsed { position: fixed; top: 0; bottom: 0; left: 0; box-shadow: 4px 0 24px rgba(0,0,0,0.15); margin-left: 0; opacity: 1; pointer-events: auto; transform: translateX(-105%); transition: transform var(--transition); }
+    .nav-panel.mobile-open { transform: none; }
+    .nav-panel { width: min(var(--nav-width), 85vw); min-width: min(var(--nav-width), 85vw); } /* a wide saved desktop width must not overflow a phone */
+    .nav-resize, .browse-btn, .nav-collapsed .browse-btn { display: none; }
+    .search-trigger { min-width: 0; } .search-trigger span, .search-trigger kbd { display: none; }
+    .site-title-text { display: none; }
+    .page, .doc-wrap { padding: 1.2rem 16px 3rem; }
+    .notes-side { display: none; }
+    .csv-wrap { padding: 1rem 16px; }
+    .hide-sm { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="nav-panel" id="navPanel" aria-label="Files">
+    <div class="nav-resize" id="navResize" role="separator" aria-orientation="vertical" aria-label="Resize the file panel" tabindex="0" title="Drag to resize. Double-click to reset"></div>
+    <div class="nav-header">
+      <div style="min-width:0"><h2 id="navTitle">Files</h2><div class="file-count" id="fileCount"></div></div>
+      <button class="collapse-btn dock-only" id="navCollapseBtn" title="Hide panel (press [)">
+        <svg viewBox="0 0 24 24"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>Collapse
+      </button>
+      <div class="float-only" style="gap:0.3rem">
+        <button class="collapse-btn" id="navDockBtn" title="Dock the panel (press [)">Dock &raquo;</button>
+        <button class="icon-btn" id="navFloatClose" title="Close" aria-label="Close the Browse panel"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+      </div>
+    </div>
+    <div class="nav-quick-links">
+      <a class="nav-chip" id="readmeChip" href="#/p/README.md"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 2l5 5h-5V4zM6 20V4h6v6h6v10H6z"/></svg>README</a>
+      <a class="nav-chip" id="ghChip" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.1.39-1.99 1.03-2.69-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02A9.58 9.58 0 0112 6.8c.85.004 1.71.115 2.51.34 1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.6 1.03 2.69 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.16.59.67.5A10.01 10.01 0 0022 12c0-5.52-4.48-10-10-10z"/></svg>GitHub</a>
+      <button class="nav-chip" id="searchChip"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>Find <kbd>/</kbd></button>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-view="folders">Folders</button>
+      <button class="nav-tab" data-view="added">New</button>
+      <button class="nav-tab" data-view="updated">Updated</button>
+      <button class="nav-tab" data-view="authors">Authors</button>
+      <button class="nav-tab" data-view="history">History</button>
+    </div>
+    <div class="nav-toolbar">
+      <input type="text" id="filterInput" placeholder="Filter by name..." aria-label="Filter files by name" />
+      <div class="type-filter-group" id="typeFilter">
+        <button class="type-filter-btn active" data-g="all">All</button>
+        <button class="type-filter-btn" data-g="md">Docs</button>
+        <button class="type-filter-btn" data-g="html">Pages</button>
+        <button class="type-filter-btn" data-g="data">Data</button>
+        <button class="type-filter-btn" data-g="code">Code</button>
+        <button class="type-filter-btn" data-g="media">Media</button>
+      </div>
+      <div class="tree-actions" id="treeActions"><button class="tree-action" id="expandAll">Expand</button>|<button class="tree-action" id="collapseAll">Collapse</button></div>
+    </div>
+    <div class="nav-view" id="navView"></div>
+    <div class="nav-footer">
+      <button class="icon-btn" id="settingsBtn" title="Settings" aria-haspopup="dialog"><svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 00.12-.61l-1.92-3.32a.488.488 0 00-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 00-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 00-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg></button>
+      <span class="build-stamp" id="buildStamp"></span>
+      <button class="icon-btn" id="themeToggle" title="Toggle light/dark"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 109 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 01-4.4 2.26 5.403 5.403 0 01-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg></button>
+    </div>
+    <div class="settings-backdrop" id="settingsBackdrop">
+      <div class="settings-modal" role="dialog" aria-label="Settings">
+        <div class="settings-modal-header">
+          <span class="settings-modal-title">Settings</span>
+          <button class="settings-modal-close" id="settingsClose" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+        </div>
+        <div class="settings-modal-body" id="settingsBody"></div><!-- built by the Settings modal script -->
+        <div class="settings-modal-footer"><button class="settings-reset" id="settingsReset">Reset to defaults</button></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-content">
+    <div class="header-row-1">
+      <button class="home-icon-btn" id="homeBtn" title="Home"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>Home</button>
+      <span class="site-title-text" id="siteTitle"></span>
+      <span class="header-sep hide-sm"></span>
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <span class="header-spacer"></span>
+      <button class="search-trigger" id="searchTrigger"><svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.47 6.47 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg><span>Find files</span><kbd>&#8984;K</kbd></button>
+      <button class="share-btn" id="shareBtn" title="Copy link"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>Share</button>
+    </div>
+    <div class="header-row-2" id="headerRow2"></div>
+    <div class="main-body" id="mainBody"><div class="loading">Loading the file list...</div></div>
+  </div>
+</div>
+
+<div class="palette-backdrop" id="paletteBackdrop">
+  <div class="palette" role="dialog" aria-label="Find files">
+    <input id="paletteInput" placeholder="Find a file by name, folder, description or tag..." autocomplete="off" aria-label="Find files" />
+    <div class="palette-list" id="paletteList"></div>
+    <div class="palette-foot"><span><kbd>&uarr;</kbd> <kbd>&darr;</kbd> move &middot; <kbd>&crarr;</kbd> open &middot; <kbd>esc</kbd> close</span><span id="paletteAll"></span></div>
+  </div>
+</div>
+<div class="info-popover" id="infoPopover"></div>
+<div class="menu" id="menu" role="menu"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ───────────── Browser storage: one key registry, every value validated on load ───────────── */
+const KEYS = {
+  theme: "rb.theme", open: "rb.tree.open", indent: "rb.tree.indent", indentCustom: "rb.tree.indentCustom",
+  guideLines: "rb.tree.guideLines", mdTheme: "rb.md.theme", mdTextScale: "rb.md.textScale",
+  mdWidth: "rb.md.width", notesMode: "rb.notes.mode", history: "rb.history", navWidth: "rb.nav.width", navCollapsed: "rb.nav.collapsed",
+  uiScale: "rb.ui.scale", treeScale: "rb.tree.scale", density: "rb.tree.density", sort: "rb.tree.sort", zebra: "rb.tree.zebra",
+  zebraSpan: "rb.tree.zebraSpan", zebraStrength: "rb.tree.zebraStrength", folderIcons: "rb.tree.folderIcons", iconStyle: "rb.tree.iconStyle",
+  iconColor: "rb.tree.iconColor", typeBadges: "rb.tree.typeBadges", folderCounts: "rb.tree.folderCounts", wrapNames: "rb.tree.wrapNames",
+  reveal: "rb.tree.reveal", defaultTab: "rb.nav.defaultTab", recentDays: "rb.nav.recentDays"
+};
+function load(key, valid, fallback) {
+  try { const v = JSON.parse(localStorage.getItem(key)); return v !== null && valid(v) ? v : fallback; } catch (e) { return fallback; }
+}
+function save(key, value) { try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage blocked: defaults still work */ } }
+const isStrList = v => Array.isArray(v) && v.every(x => typeof x === "string");
+
+/* ───────────── Display preferences (the Settings modal edits these) ───────────── */
+const TEXT_SIZES = [0.9, 1, 1.1, 1.25]; // S, M, L, XL
+const isBool = v => typeof v === "boolean", oneOf = list => v => list.includes(v);
+const PREF_SPEC = { // name: [storage key, validator, default]
+  theme: [KEYS.theme, oneOf(["light", "dark", "system"]), "system"],
+  uiScale: [KEYS.uiScale, oneOf(TEXT_SIZES), 1], treeScale: [KEYS.treeScale, oneOf(TEXT_SIZES), 1],
+  indent: [KEYS.indent, oneOf(["compact", "default", "custom"]), "default"],
+  indentCustom: [KEYS.indentCustom, v => typeof v === "number" && isFinite(v) && v >= 0.5 && v <= 4.0, 2.0],
+  density: [KEYS.density, oneOf(["compact", "default", "comfortable"]), "default"],
+  sort: [KEYS.sort, oneOf(["name", "updated"]), "name"],
+  guideLines: [KEYS.guideLines, isBool, true],
+  zebra: [KEYS.zebra, isBool, false], zebraSpan: [KEYS.zebraSpan, oneOf(["full", "indent"]), "full"],
+  zebraStrength: [KEYS.zebraStrength, oneOf(["subtle", "medium"]), "medium"],
+  folderIcons: [KEYS.folderIcons, isBool, false], iconStyle: [KEYS.iconStyle, oneOf(["outline", "filled"]), "filled"],
+  iconColor: [KEYS.iconColor, oneOf(["muted", "accent"]), "accent"],
+  typeBadges: [KEYS.typeBadges, isBool, true], folderCounts: [KEYS.folderCounts, isBool, true],
+  wrapNames: [KEYS.wrapNames, isBool, false], reveal: [KEYS.reveal, isBool, true],
+  defaultTab: [KEYS.defaultTab, oneOf(["folders", "added", "updated", "authors", "history"]), "folders"],
+  recentDays: [KEYS.recentDays, oneOf([0, 7, 30, 90]), 0] // 0: the latest 40 commits
+};
+const PREFS = Object.fromEntries(Object.entries(PREF_SPEC).map(([k, [key, valid, fallback]]) => [k, load(key, valid, fallback)]));
+const savePref = k => save(PREF_SPEC[k][0], PREFS[k]);
+
+/* ───────────── Site data (written by .github/scripts/build_site.py) ───────────── */
+let CONFIG = {}, COMMITS = [], FILES = [], BY_PATH = {}, DIRS = new Set(), RENAMES = {};
+const EXT_INFO = {
+  md: ["MD", "md"], markdown: ["MD", "md"], txt: ["TXT", "md"], pdf: ["PDF", "md"], pptx: ["PPTX", "md"], docx: ["DOCX", "md"],
+  html: ["HTML", "html"], htm: ["HTML", "html"],
+  csv: ["CSV", "data"], tsv: ["TSV", "data"], json: ["JSON", "data"], yaml: ["YAML", "data"], yml: ["YAML", "data"], xlsx: ["XLSX", "data"],
+  go: ["GO", "code"], mod: ["MOD", "code"], sum: ["SUM", "code"], py: ["PY", "code"], sql: ["SQL", "code"], sh: ["SH", "code"],
+  js: ["JS", "code"], mjs: ["JS", "code"], ts: ["TS", "code"], css: ["CSS", "code"], patch: ["DIFF", "code"], diff: ["DIFF", "code"],
+  svg: ["SVG", "media"], png: ["PNG", "media"], jpg: ["JPG", "media"], jpeg: ["JPG", "media"], gif: ["GIF", "media"], webp: ["WEBP", "media"]
+};
+// Shown as text. Anything else that is not Markdown, HTML, an image or PDF gets a download card.
+const TEXT_EXT = new Set(["txt", "csv", "tsv", "json", "yaml", "yml", "go", "mod", "sum", "py", "sql", "sh", "js", "mjs", "ts", "css", "patch", "diff", "gitignore", "toml", "ini", "xml", ""]);
+const IMAGE_EXT = new Set(["svg", "png", "jpg", "jpeg", "gif", "webp"]);
+const GROUP_LABEL = { md: "Docs", html: "Pages", data: "Data", code: "Code", media: "Media", other: "Other" };
+const TEXT_LIMIT = 3 * 1048576; // larger text files get a download card instead of a viewer
+const JSON_LIMIT = 12 * 1048576; // JSON builds its tree as nodes open, so it can be larger
+
+function loadData(d) {
+  CONFIG = d.config || {};
+  COMMITS = (d.commits || []).map(([sha, short, author, date, msg]) => ({ sha, short, author, date, msg }));
+  const none = { sha: "", short: "", author: "Unknown", date: CONFIG.builtAt || "", msg: "" };
+  FILES = (d.files || []).map(r => {
+    const name = r.path.split("/").pop();
+    const ext = name.includes(".") ? name.split(".").pop().toLowerCase() : "";
+    const info = EXT_INFO[ext] || [(ext || "file").toUpperCase().slice(0, 5), "other"];
+    return {
+      path: r.path, name, dir: r.path.includes("/") ? r.path.slice(0, r.path.lastIndexOf("/")) : "", ext, label: info[0], group: info[1],
+      bytes: r.bytes, last: COMMITS[r.last] || none, added: COMMITS[r.added] || none, description: r.description || "", tags: r.tags || []
+    };
+  });
+  BY_PATH = Object.fromEntries(FILES.map(f => [f.path, f]));
+  FILES.forEach(f => {
+    let acc = []; f.dir.split("/").filter(Boolean).forEach(s => { acc.push(s); DIRS.add(acc.join("/")); });
+    if (f.ext === "html") { const p = f.path.replace(/\.html$/, ".md"); if (BY_PATH[p]) { f.pair = p; BY_PATH[p].pairOf = f.path; } }
+  });
+  RENAMES = d.renames || {};
+}
+
+/* ───────────── Helpers ───────────── */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const fmtBytes = b => b < 1024 ? b + " B" : b < 1048576 ? (b / 1024).toFixed(1) + " KB" : (b / 1048576).toFixed(1) + " MB";
+function ago(iso) {
+  if (!iso) return "";
+  const d = (Date.now() - new Date(iso).getTime()) / 86400e3;
+  if (d < 1) return "today"; if (d < 2) return "yesterday"; if (d < 14) return Math.floor(d) + " days ago";
+  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: d > 300 ? "numeric" : undefined });
+}
+const fmtDate = iso => iso ? new Date(iso).toLocaleString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }) : "-";
+const tbadge = f => `<span class="tbadge g-${f.group}">${esc(f.label)}</span>`;
+const fileUrl = p => p.split("/").map(encodeURIComponent).join("/"); // the file itself, deployed beside the viewer
+const ghUrl = (kind, p) => `${CONFIG.repoUrl}/${kind}/${CONFIG.branch}/${fileUrl(p)}`;
+const FOLDER_SVG = `<svg viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>`;
+const CHEV = `<svg class="chev" viewBox="0 0 24 24"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>`;
+// Tree folder icons (Settings > Folder icons). Outline is stroked; filled opens to a faded back and a solid front flap.
+const FOLDER_CLOSED_PATH = `<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>`;
+const FOLDER_OPEN_PATH = {
+  outline: `<path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/>`,
+  filled: `<path class="back" d="M2 5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2H9.24a2 2 0 0 0-1.74 1.1L2 19.5Z"/><path d="M9.24 10H21a1.6 1.6 0 0 1 1.5 2.1l-1.9 6.4a2 2 0 0 1-1.9 1.5H3.3a1 1 0 0 1-.87-1.5l5.1-7.5A2 2 0 0 1 9.24 10Z"/>`
+};
+const folderIcons = () => `<svg class="ficon is-closed ${PREFS.iconStyle}" viewBox="0 0 24 24" aria-hidden="true">${FOLDER_CLOSED_PATH}</svg><svg class="ficon is-open ${PREFS.iconStyle}" viewBox="0 0 24 24" aria-hidden="true">${FOLDER_OPEN_PATH[PREFS.iconStyle]}</svg>`;
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("show"), 1600); }
+function resolveRel(base, href) {
+  const parts = href.startsWith("/") ? [] : (base ? base.split("/") : []);
+  href.split("/").forEach(seg => { if (seg === "..") parts.pop(); else if (seg && seg !== ".") parts.push(seg); });
+  return parts.join("/");
+}
+function slugify(t) { return t.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/\s/g, "-"); }
+const isDarkUi = () => { const t = document.documentElement.getAttribute("data-theme"); return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; };
+
+const textCache = new Map();
+async function fetchText(f) {
+  if (!textCache.has(f.path)) {
+    textCache.set(f.path, fetch(fileUrl(f.path)).then(r => { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.text(); })
+      .catch(e => { textCache.delete(f.path); throw e; }));
+  }
+  return textCache.get(f.path);
+}
+
+/* ───────────── Markdown: pinned marked + DOMPurify, loaded on first use ───────────── */
+//   marked 18.0.14: lib/marked.umd.js, sha256 21568877a938d2c4e7d74e27f18e60da96bb73a68809610ca39216e1efebae62
+const MARKED_SRC = "_viewer/vendor/marked-18.0.14.umd.js";
+//   DOMPurify 3.4.16: dist/purify.min.js, sha256 2c90a9b46d6463f26038a29b686e82bc91de01fdac9d5229e7cfe3b360134ea2
+const PURIFY_SRC = "_viewer/vendor/purify-3.4.16.min.js";
+let mdLibs = null;
+function loadScript(src) {
+  return new Promise((resolve, reject) => { const s = document.createElement("script"); s.src = src; s.onload = resolve; s.onerror = () => reject(new Error("Could not load " + src)); document.head.appendChild(s); });
+}
+function loadMarkdownLibs() {
+  if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") return Promise.resolve();
+  if (!mdLibs) mdLibs = Promise.all([loadScript(MARKED_SRC), loadScript(PURIFY_SRC)]).catch(e => { mdLibs = null; throw e; });
+  return mdLibs;
+}
+const stripFrontMatter = src => src.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+
+// Rewrite a link inside a document so it opens in the viewer, follows a rename, or leaves the site.
+function rewriteLink(a, base) {
+  const href = a.getAttribute("href");
+  if (/^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith("//")) { a.target = "_blank"; a.rel = "noopener"; return; }
+  const hashAt = href.indexOf("#"), pathPart = hashAt < 0 ? href : href.slice(0, hashAt), frag = hashAt < 0 ? "" : href.slice(hashAt + 1);
+  let frg = frag; try { frg = decodeURIComponent(frag); } catch (e) { /* keep as written */ }
+  if (!pathPart) { a.dataset.anchor = "h-" + slugify(frg); a.setAttribute("href", "#"); return; }
+  let target; try { target = resolveRel(base, decodeURIComponent(pathPart.split("?")[0])); } catch (e) { target = resolveRel(base, pathPart); }
+  if (RENAMES[target]) target = RENAMES[target];
+  if (BY_PATH[target]) a.setAttribute("href", "#/p/" + target + (frg ? "#h-" + slugify(frg) : ""));
+  else if (DIRS.has(target.replace(/\/$/, ""))) a.setAttribute("href", "#/f/" + target.replace(/\/$/, ""));
+  else if (target === "") a.setAttribute("href", "#/");
+  else { a.setAttribute("href", ghUrl("blob", target)); a.target = "_blank"; a.rel = "noopener"; }
+}
+async function renderMd(src, base) {
+  const div = document.createElement("div");
+  try { await loadMarkdownLibs(); } catch (e) {
+    div.innerHTML = `<div class="md-plain">${esc(src)}</div>`;
+    return { node: div, toc: [] };
+  }
+  div.innerHTML = DOMPurify.sanitize(marked.parse(stripFrontMatter(src), { gfm: true }));
+  const used = new Set(), toc = [];
+  div.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach(h => {
+    // Prefixed so a heading can never take the id of a viewer element.
+    const id = "h-" + (slugify(h.textContent) || "section"); let n = id, i = 1;
+    while (used.has(n)) n = id + "-" + i++;
+    used.add(n); h.id = n;
+    if (h.tagName === "H2" || h.tagName === "H3") toc.push({ lv: +h.tagName[1], text: h.textContent, id: n });
+  });
+  div.querySelectorAll("a[href]").forEach(a => rewriteLink(a, base));
+  div.querySelectorAll("img[src]").forEach(img => {
+    const s = img.getAttribute("src");
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(s) && !s.startsWith("//")) { try { img.src = fileUrl(resolveRel(base, decodeURIComponent(s))); } catch (e) { /* leave as written */ } }
+    img.loading = "lazy";
+  });
+  div.querySelectorAll("pre > code").forEach(code => {
+    const lang = (code.className.match(/language-(\S+)/) || [])[1];
+    if (lang === "mermaid") code.parentElement.insertAdjacentHTML("beforebegin", `<div class="mermaid-label">Mermaid diagram (source)</div>`);
+    else if (lang) code.innerHTML = highlight(code.textContent, lang);
+  });
+  return { node: div, toc };
+}
+
+/* ───────────── Code highlighting ───────────── */
+const KW = {
+  go: "package|import|func|return|if|else|for|range|var|const|type|struct|interface|nil|defer|go|map|chan|select|case|switch|break|continue|true|false",
+  py: "def|return|import|from|as|if|else|elif|for|while|in|with|not|and|or|is|None|True|False|class|try|except|finally|raise|lambda|yield|pass|async|await",
+  sql: "select|from|where|and|or|not|join|on|group|by|order|desc|asc|as|count|sum|avg|min|max|distinct|interval|current_date|false|true|null|limit|having|left|right|inner|outer|with|case|when|then|else|end|in|is|union|all|insert|update|delete|create|table",
+  js: "const|let|var|function|return|if|else|for|while|of|in|new|class|import|from|export|default|async|await|try|catch|throw|true|false|null|undefined|typeof",
+  yaml: "true|false|null", json: "true|false|null",
+  sh: "if|then|else|elif|fi|for|while|do|done|case|esac|echo|export|function|return|local|set"
+};
+function highlight(code, lang) {
+  lang = { yml: "yaml", python: "py", golang: "go", mjs: "js", ts: "js", javascript: "js", typescript: "js", bash: "sh", shell: "sh", zsh: "sh" }[lang] || lang;
+  const com = { py: "#.*", yaml: "#.*", sh: "#.*", sql: "--.*", go: "//.*", js: "//.*", json: "(?!)" }[lang] || "(?!)";
+  const str = lang === "py" ? `"""[\\s\\S]*?"""|"(?:[^"\\\\\\n]|\\\\.)*"|'(?:[^'\\\\\\n]|\\\\.)*'` : `"(?:[^"\\\\\\n]|\\\\.)*"|'(?:[^'\\\\\\n]|\\\\.)*'|\`[^\`]*\``;
+  const kw = KW[lang];
+  if (!kw && com === "(?!)") return esc(code);
+  const re = new RegExp(`(${com})|(${str})|(\\b(?:${kw || "(?!)"})\\b)|(\\b\\d+(?:\\.\\d+)?\\b)`, "g" + (lang === "sql" ? "i" : ""));
+  let out = "", last = 0, m;
+  while ((m = re.exec(code))) {
+    if (m.index === re.lastIndex) { re.lastIndex++; continue; }
+    out += esc(code.slice(last, m.index));
+    const cls = m[1] ? "com" : m[2] ? "str" : m[3] ? "kw" : "num";
+    out += `<span class="tok-${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(code.slice(last));
+}
+const MAX_CODE_LINES = 10000;
+function codeLines(code, lang) {
+  const html = highlight(code, lang);
+  // Split highlighted HTML on newlines while keeping spans balanced per line.
+  const lines = []; let open = [];
+  html.split("\n").forEach(line => {
+    const prefix = open.join("");
+    const opens = (line.match(/<span class="[^"]+">/g) || []), closes = (line.match(/<\/span>/g) || []).length;
+    open = open.concat(opens).slice(0, Math.max(0, open.length + opens.length - closes));
+    lines.push(prefix + line + "</span>".repeat(open.length));
+  });
+  const shown = lines.slice(0, MAX_CODE_LINES);
+  return shown.map((l, n) => `<div class="code-line"><span class="ln">${n + 1}</span><span>${l || " "}</span></div>`).join("") +
+    (lines.length > MAX_CODE_LINES ? `<div class="cap-note">Showing the first ${MAX_CODE_LINES.toLocaleString()} of ${lines.length.toLocaleString()} lines. Use Raw for the whole file.</div>` : "");
+}
+
+/* ───────────── CSV ───────────── */
+function parseCsv(text, sep) {
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
+    else if (c === '"') q = true;
+    else if (c === sep) { row.push(cell); cell = ""; }
+    else if (c === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; }
+    else if (c !== "\r") cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+const MAX_CSV_ROWS = 2000;
+function wireCsv(text, sep) {
+  const rows = parseCsv(text.replace(/^﻿/, "").trim(), sep), head = rows[0] || [], body = rows.slice(1);
+  const numeric = head.map((_, c) => body.length > 0 && body.every(r => r[c] === undefined || r[c] === "" || !isNaN(+r[c])));
+  let sortCol = -1, dir = 1;
+  const draw = () => {
+    const q = $("#csvFilter").value.toLowerCase();
+    let list = body.filter(r => !q || r.join(" ").toLowerCase().includes(q));
+    if (sortCol >= 0) list = list.slice().sort((a, b) => (numeric[sortCol] ? (+(a[sortCol] || 0) - +(b[sortCol] || 0)) : String(a[sortCol] || "").localeCompare(String(b[sortCol] || ""))) * dir);
+    const shown = list.slice(0, MAX_CSV_ROWS);
+    $("#csvCount").textContent = `${list.length.toLocaleString()} of ${body.length.toLocaleString()} rows · ${head.length} columns` + (list.length > MAX_CSV_ROWS ? ` · showing the first ${MAX_CSV_ROWS.toLocaleString()}` : "");
+    $("#csvTable").innerHTML = `<thead><tr><th class="rownum">#</th>${head.map((h, c) => `<th data-col="${c}">${esc(h)}${c === sortCol ? (dir > 0 ? " ▲" : " ▼") : ""}</th>`).join("")}</tr></thead><tbody>${shown.map((r, n) => `<tr><td class="rownum">${n + 1}</td>${head.map((_, c) => { const v = r[c] === undefined ? "" : r[c]; return `<td class="${numeric[c] ? "num" : ""}" title="${esc(v)}">${esc(numeric[c] && v !== "" ? (+v).toLocaleString() : v)}</td>`; }).join("")}</tr>`).join("")}</tbody>`;
+    $("#csvTable").querySelectorAll("th[data-col]").forEach(th => th.onclick = () => { const c = +th.dataset.col; dir = sortCol === c ? -dir : 1; sortCol = c; draw(); });
+  };
+  $("#csvFilter").oninput = draw; draw();
+}
+
+/* ───────────── JSON tree (children built when a node first opens) ───────────── */
+const MAX_JSON_CHILDREN = 500;
+function jsonNode(v, key, depth) {
+  const k = key != null ? `<span class="k">${typeof key === "number" ? key : '"' + esc(key) + '"'}</span>: ` : "";
+  if (v === null || typeof v !== "object") {
+    const cls = typeof v === "string" ? "s" : typeof v === "number" ? "n" : "dim";
+    return `<div class="leaf">${k}<span class="${cls}">${esc(JSON.stringify(v))}</span></div>`;
+  }
+  const arr = Array.isArray(v), n = arr ? v.length : Object.keys(v).length;
+  const id = jsonStore.push(v) - 1;
+  const summary = `${k}<span class="dim">${arr ? "[" : "{"} ${n.toLocaleString()} ${arr ? "items" : "keys"} ${arr ? "]" : "}"}</span>`;
+  const open = depth < jsonOpenDepth;
+  return `<details data-jid="${id}" data-depth="${depth}"${open ? " open" : ""}><summary>${summary}</summary>${open ? jsonChildren(v, depth) : ""}</details>`;
+}
+let jsonStore = [], jsonOpenDepth = 2; // small files open two levels, large files one
+function jsonChildren(v, depth) {
+  const entries = Array.isArray(v) ? v.map((x, i) => [i, x]) : Object.entries(v);
+  return entries.slice(0, MAX_JSON_CHILDREN).map(([kk, x]) => jsonNode(x, kk, depth + 1)).join("") +
+    (entries.length > MAX_JSON_CHILDREN ? `<div class="leaf dim">... ${(entries.length - MAX_JSON_CHILDREN).toLocaleString()} more. Use Raw for the whole file.</div>` : "");
+}
+function wireJson(root) {
+  root.addEventListener("toggle", e => {
+    const d = e.target;
+    if (d.tagName !== "DETAILS" || !d.open || d.dataset.built) return;
+    d.dataset.built = "1";
+    if (d.children.length === 1) d.insertAdjacentHTML("beforeend", jsonChildren(jsonStore[+d.dataset.jid], +d.dataset.depth));
+  }, true);
+}
+
+/* ───────────── State ───────────── */
+const NOTES_MODES = ["hide", "sidebar"];
+const state = {
+  view: PREFS.defaultTab, filter: "", group: "all",
+  open: new Set(load(KEYS.open, isStrList, null) || []), openIsDefault: load(KEYS.open, isStrList, null) === null,
+  route: null, notesMode: load(KEYS.notesMode, v => NOTES_MODES.includes(v), "hide"), tocOn: true,
+  searchGroup: "all", searchFolder: "all"
+};
+function saveOpen() { save(KEYS.open, [...state.open]); state.openIsDefault = false; }
+function visibleFiles() {
+  const q = state.filter.toLowerCase();
+  return FILES.filter(f => (state.group === "all" || f.group === state.group) && (!q || f.path.toLowerCase().includes(q)));
+}
+// Tree order (Settings > Sort): by name, or most recently updated first with name breaking ties.
+const fileTime = f => Date.parse(f.last.date) || 0;
+const fileCmp = (a, b) => (PREFS.sort === "updated" && fileTime(b) - fileTime(a)) || a.name.localeCompare(b.name);
+// The files in the same folder, in tree order: what the arrows and the "2 / 6" counter step through.
+const siblings = f => FILES.filter(x => x.dir === f.dir).sort(fileCmp);
+
+/* ───────────── Sidebar ───────────── */
+function buildTree(files) {
+  const root = { dirs: {}, files: [] };
+  files.forEach(f => {
+    let node = root, acc = [];
+    f.path.split("/").slice(0, -1).forEach(seg => { acc.push(seg); node = node.dirs[seg] = node.dirs[seg] || { path: acc.join("/"), dirs: {}, files: [] }; });
+    node.files.push(f);
+  });
+  return root;
+}
+function countFiles(node) { return node.files.length + Object.values(node.dirs).reduce((s, d) => s + countFiles(d), 0); }
+// Newest file anywhere under a folder, cached on the node: what "Recently updated" sorts folders by.
+function newestIn(node) {
+  if (node.newest === undefined) node.newest = Math.max(0, ...node.files.map(fileTime), ...Object.values(node.dirs).map(newestIn));
+  return node.newest;
+}
+function renderTreeNode(node, forceOpen) {
+  let h = "";
+  const dirCmp = (a, b) => (PREFS.sort === "updated" && newestIn(node.dirs[b]) - newestIn(node.dirs[a])) || a.localeCompare(b);
+  Object.keys(node.dirs).sort(dirCmp).forEach(name => {
+    const d = node.dirs[name], open = forceOpen || state.open.has(d.path);
+    const active = state.route && state.route.kind === "f" && state.route.path === d.path;
+    h += `<div class="tree-folder ${open ? "open" : ""} ${active ? "active" : ""}" data-folder="${esc(d.path)}" tabindex="0" role="button" aria-expanded="${open}">${CHEV}${PREFS.folderIcons ? folderIcons() : ""}<span class="tree-name">${esc(name)}</span><span class="count-badge">${countFiles(d)}</span></div>`;
+    h += `<div class="tree-children ${open ? "" : "closed"}">${open ? renderTreeNode(d, forceOpen) : ""}</div>`;
+  });
+  node.files.slice().sort(fileCmp).forEach(f => {
+    const active = state.route && state.route.kind === "p" && state.route.path === f.path;
+    const pair = f.pair ? `<span class="pair-dot" title="Has paired notes">+notes</span>` : "";
+    h += `<div class="tree-file ${active ? "active" : ""}" data-file="${esc(f.path)}" title="${esc(f.path)}" tabindex="0" role="link">${tbadge(f)}<span class="tree-name">${esc(f.name)}</span>${pair}</div>`;
+  });
+  return h;
+}
+// Scroll the open file's row into view, up and down only: a deep row would also pull the tree sideways.
+function revealActive() {
+  const view = $("#navView"), act = view.querySelector(".active");
+  if (act) { act.scrollIntoView({ block: "nearest" }); view.scrollLeft = 0; }
+}
+function recentItem(f, action) {
+  return `<div class="recent-item" data-file="${esc(f.path)}" tabindex="0" role="link">${tbadge(f)}<div style="min-width:0"><div class="recent-name">${esc(f.name)}</div><div class="recent-path">${esc(f.dir || "/")}</div></div>${action ? `<span class="act ${action}">${action}</span>` : ""}</div>`;
+}
+function renderSidebar() {
+  const files = visibleFiles();
+  $("#fileCount").textContent = state.filter || state.group !== "all" ? `${files.length} of ${FILES.length} files` : `${FILES.length} files`;
+  $("#treeActions").style.display = state.view === "folders" ? "flex" : "none";
+  let h = "";
+  if (state.view === "folders") {
+    h = files.length ? renderTreeNode(buildTree(files), !!state.filter) : `<div class="empty-note">No files match.</div>`;
+  } else if (state.view === "added" || state.view === "updated") {
+    // Settings > New and Updated show: the latest 40 commits, or every commit in the last 7, 30 or 90 days.
+    const want = state.view, since = PREFS.recentDays ? Date.now() - PREFS.recentDays * 86400e3 : 0; let shown = 0;
+    for (const c of COMMITS) {
+      if (since && (Date.parse(c.date) || 0) < since) continue; // skip, not stop: a rebased commit can keep an old date above newer ones
+      const hits = files.filter(f => want === "added" ? f.added === c : (f.last === c && f.added !== c));
+      if (!hits.length) continue;
+      h += `<div class="commit-head"><div class="commit-msg">${esc(c.msg)}</div><div class="commit-meta">${esc(c.short)} · ${esc(c.author)} · ${ago(c.date)}</div></div>`;
+      h += hits.map(f => recentItem(f, want)).join("");
+      if (++shown >= 40 && !since) break;
+    }
+    if (!h) h = `<div class="empty-note">${since ? `Nothing in the last ${PREFS.recentDays} days for this filter.` : "Nothing here for this filter."}</div>`;
+  } else if (state.view === "authors") {
+    const by = {};
+    files.forEach(f => (by[f.last.author] = by[f.last.author] || []).push(f));
+    Object.keys(by).sort().forEach(a => {
+      h += `<div class="group-head">${esc(a)} <span style="font-weight:400">· ${by[a].length}</span></div>` + by[a].sort((x, y) => y.last.date.localeCompare(x.last.date)).slice(0, 200).map(f => recentItem(f)).join("");
+    });
+  } else {
+    const hist = load(KEYS.history, isStrList, []).filter(p => BY_PATH[p]);
+    h = hist.length ? `<div class="group-head">Recently opened in this browser</div>` + hist.map(p => recentItem(BY_PATH[p])).join("") + `<div class="empty-note"><button class="tree-action" id="clearHistory">Clear history</button></div>` : `<div class="empty-note">Files you open appear here. The list stays in this browser.</div>`;
+  }
+  $("#navView").innerHTML = h;
+  // Alternating rows count visible rows only (closed folders render no children), across all nesting levels
+  if (PREFS.zebra) $("#navView").querySelectorAll(".tree-folder, .tree-file, .recent-item").forEach((r, i) => { if (i % 2) r.classList.add("z-odd"); });
+  const ch = $("#clearHistory"); if (ch) ch.onclick = () => { save(KEYS.history, []); renderSidebar(); };
+}
+
+/* ───────────── Header ───────────── */
+// "root", then each folder down to dir. Each one opens a menu of what that folder holds.
+function crumbs(dir) {
+  const crumb = (p, label) => `<button class="crumb" data-crumb="${esc(p)}" aria-haspopup="menu" aria-expanded="false">${esc(label)}</button>`;
+  const segs = dir.split("/").filter(Boolean);
+  return crumb("", "root") + segs.map((s, i) => `<span class="sep">/</span>` + crumb(segs.slice(0, i + 1).join("/"), s)).join("") + (segs.length ? `<span class="sep">/</span>` : "");
+}
+
+/* ───────────── Dropdown menu: breadcrumb folders and the file counter's quick-jump list ───────────── */
+let menuAnchor = null;
+function openMenu(anchor, html) {
+  const m = $("#menu"), again = menuAnchor === anchor;
+  closeMenu();
+  if (again) return; // a second click on the same crumb or counter closes it
+  m.innerHTML = html; m.classList.add("show");
+  menuAnchor = anchor; anchor.classList.add("open"); anchor.setAttribute("aria-expanded", "true");
+  const r = anchor.getBoundingClientRect();
+  m.style.top = (r.bottom + 6) + "px";
+  m.style.left = Math.max(8, Math.min(r.left, window.innerWidth - m.offsetWidth - 8)) + "px";
+  const cur = m.querySelector(".current") || m.querySelector(".menu-item");
+  if (cur) { cur.focus({ preventScroll: true }); cur.scrollIntoView({ block: "nearest" }); }
+}
+function closeMenu(refocus) {
+  const m = $("#menu");
+  if (!m.classList.contains("show")) return;
+  m.classList.remove("show");
+  if (menuAnchor) { menuAnchor.classList.remove("open"); menuAnchor.setAttribute("aria-expanded", "false"); if (refocus && menuAnchor.isConnected) menuAnchor.focus(); }
+  menuAnchor = null;
+}
+// What a folder holds: its folders with file counts, then its files. The current path is highlighted.
+function folderMenu(prefix) {
+  const cur = state.route.path || "", within = prefix ? prefix + "/" : "", dirs = {}, files = [];
+  FILES.forEach(f => {
+    if (!f.path.startsWith(within)) return;
+    const rest = f.path.slice(within.length), at = rest.indexOf("/");
+    if (at >= 0) { const d = rest.slice(0, at); dirs[d] = (dirs[d] || 0) + 1; } else files.push(f);
+  });
+  const item = (cls, attr, inner) => `<div class="menu-item ${cls}" ${attr} tabindex="-1" role="menuitem">${inner}</div>`;
+  let h = prefix ? item("", `data-folder="${esc(prefix)}"`, `${FOLDER_SVG}<span class="tree-name">Open the folder page</span>`)
+    : `<a class="menu-item" href="#/" tabindex="-1" role="menuitem" style="color:inherit;text-decoration:none"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span class="tree-name">Home</span></a>`;
+  h += `<div class="menu-sep"></div>`;
+  h += Object.keys(dirs).sort((a, b) => a.localeCompare(b)).map(d => {
+    const p = within + d;
+    return item(cur === p || cur.startsWith(p + "/") ? "current" : "", `data-folder="${esc(p)}"`, `${FOLDER_SVG}<span class="tree-name">${esc(d)}</span><span class="count-badge">${dirs[d]}</span>`);
+  }).join("");
+  h += files.sort((a, b) => a.name.localeCompare(b.name)).map(f => item(f.path === cur ? "current" : "", `data-file="${esc(f.path)}"`, `${tbadge(f)}<span class="tree-name">${esc(f.name)}</span>`)).join("");
+  return h;
+}
+function jumpMenu(f) {
+  return siblings(f).map((x, i) => `<div class="menu-item ${x === f ? "current" : ""}" data-file="${esc(x.path)}" tabindex="-1" role="menuitem"><span class="menu-num">${i + 1}</span>${tbadge(x)}<span class="tree-name">${esc(x.name)}</span></div>`).join("");
+}
+const ICON_EXT = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
+const ICON_RAW = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>`;
+const ICON_HIST = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>`;
+const NAV_REOPEN = `<button class="nav-reopen" id="navReopen" title="Toggle sidebar (press [)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="3" y="3" width="7" height="18" rx="2" fill="currentColor" opacity="0.35"/></svg></button>` +
+  `<button class="browse-btn" id="browseBtn" title="Browse files without docking the panel" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>Browse</button>`;
+
+function renderHeader() {
+  const r = state.route, row2 = $("#headerRow2");
+  const bc = $("#breadcrumb");
+  bc.innerHTML = r.kind === "p" ? crumbs(BY_PATH[r.path].dir) : r.kind === "f" ? crumbs(r.path) : r.kind === "search" ? "Find" : "";
+  bc.scrollLeft = bc.scrollWidth;
+  if (r.kind === "p") {
+    const f = BY_PATH[r.path], sib = siblings(f), idx = sib.indexOf(f), many = sib.length > 1;
+    const prev = sib[idx - 1] || null, next = sib[idx + 1] || null;
+    let right = "";
+    if (f.ext === "md") right += `<button class="src-link hide-sm" id="tocToggle">${state.tocOn ? "Hide outline" : "Show outline"}</button>`;
+    if (f.pair || f.pairOf) {
+      const htmlPath = f.pair ? f.path : f.pairOf;
+      right += `<div class="seg"><button class="${f.ext === "html" ? "active" : ""}" data-go="${esc(htmlPath)}">Prototype</button><button class="${f.ext === "md" ? "active" : ""}" data-go="${esc(htmlPath.replace(/\.html$/, ".md"))}">Notes</button></div>`;
+      if (f.ext === "html") right += `<div class="seg hide-sm" id="notesMode"><button data-mode="hide" class="${state.notesMode === "hide" ? "active" : ""}">Hide</button><button data-mode="sidebar" class="${state.notesMode === "sidebar" ? "active" : ""}">Sidebar</button></div>`;
+    }
+    if (f.ext === "html") right += `<a class="src-link" href="${fileUrl(f.path)}" target="_blank" rel="noopener">${ICON_EXT}New tab</a>`;
+    right += `<a class="src-link hide-sm" href="${ghUrl("blob", f.path)}" target="_blank" rel="noopener">${ICON_EXT}GitHub</a>`;
+    right += `<a class="src-link hide-sm" href="${fileUrl(f.path)}" target="_blank" rel="noopener">${ICON_RAW}Raw</a>`;
+    right += `<a class="src-link hide-sm" href="${CONFIG.repoUrl}/commits/${CONFIG.branch}/${fileUrl(f.path)}" target="_blank" rel="noopener">${ICON_HIST}History</a>`;
+    // Arrows and the counter only when the folder has more than one file.
+    row2.innerHTML = `${NAV_REOPEN}
+      ${many ? `<button class="arrow-btn" id="prevBtn" ${prev ? "" : "disabled"} title="${prev ? "Previous: " + esc(prev.name) : ""}" aria-label="Previous file in this folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+      <button class="arrow-btn" id="nextBtn" ${next ? "" : "disabled"} title="${next ? "Next: " + esc(next.name) : ""}" aria-label="Next file in this folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+      <button class="file-counter" id="fileCounter" title="Jump to a file in this folder (press ?)" aria-haspopup="menu" aria-expanded="false">${idx + 1} / ${sib.length}</button>` : ""}
+      ${tbadge(f)}<span class="primary-filename">${esc(f.name)}</span>
+      <div class="info-wrap"><button class="info-icon" id="infoBtn" title="File info" aria-label="File info">i</button></div>
+      <div class="row2-right">${right}</div>`;
+    if (many) {
+      $("#prevBtn").onclick = () => prev && go("#/p/" + prev.path);
+      $("#nextBtn").onclick = () => next && go("#/p/" + next.path);
+    }
+    $("#infoBtn").onclick = e => { e.stopPropagation(); showInfo(f, e.currentTarget); };
+    row2.querySelectorAll("[data-go]").forEach(b => b.onclick = () => go("#/p/" + b.dataset.go));
+    const nm = $("#notesMode"); if (nm) nm.querySelectorAll("button").forEach(b => b.onclick = () => { state.notesMode = b.dataset.mode; save(KEYS.notesMode, state.notesMode); renderRoute(true); });
+    const tt = $("#tocToggle"); if (tt) tt.onclick = () => { state.tocOn = !state.tocOn; const toc = $(".toc"); if (toc) toc.classList.toggle("hidden", !state.tocOn); tt.textContent = state.tocOn ? "Hide outline" : "Show outline"; };
+  } else if (r.kind === "f") {
+    const n = FILES.filter(f => f.path.startsWith(r.path + "/")).length;
+    row2.innerHTML = `${NAV_REOPEN}<span style="display:flex;width:16px;height:16px">${FOLDER_SVG.replace("<svg", '<svg style="fill:var(--text-muted)"')}</span><span class="primary-filename">${esc(r.path.split("/").pop())}</span><span class="file-counter">${n} files</span><div class="row2-right"><a class="src-link" href="${ghUrl("tree", r.path)}" target="_blank" rel="noopener">${ICON_EXT}GitHub</a></div>`;
+  } else {
+    const sha = CONFIG.sha ? `<a href="${CONFIG.repoUrl}/commit/${CONFIG.sha}" target="_blank" rel="noopener">${esc(CONFIG.sha.slice(0, 7))}</a>` : "";
+    const run = CONFIG.runUrl ? ` · <a href="${CONFIG.runUrl}" target="_blank" rel="noopener">build log</a>` : "";
+    row2.innerHTML = `${NAV_REOPEN}<span class="file-counter" style="font-family:inherit">Published from <b>${esc(CONFIG.branch || "")}</b> ${sha ? "at " + sha : ""} · ${ago(CONFIG.builtAt)}${run}</span>`;
+  }
+  $("#navReopen").onclick = toggleNav;
+  $("#browseBtn").onclick = () => setFloating(!$("#navPanel").classList.contains("floating"));
+  syncBrowseBtn();
+}
+function showInfo(f, anchor) {
+  const p = $("#infoPopover"), r = anchor.getBoundingClientRect();
+  const commitLink = c => c.sha ? `<a href="${CONFIG.repoUrl}/commit/${c.sha}" target="_blank" rel="noopener"><code>${esc(c.short)}</code></a> ${esc(c.msg)}` : "-";
+  p.innerHTML = `
+    <div class="info-row"><span>Path</span><code>${esc(f.path)}</code></div>
+    <div class="info-row"><span>Size</span><span>${fmtBytes(f.bytes)}</span></div>
+    <div class="info-row"><span>Modified</span><span>${fmtDate(f.last.date)} by ${esc(f.last.author)}</span></div>
+    <div class="info-row"><span>Commit</span><span>${commitLink(f.last)}</span></div>
+    <div class="info-row"><span>Added</span><span>${fmtDate(f.added.date)} by ${esc(f.added.author)}</span></div>`;
+  p.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 340)) + "px"; p.style.top = (r.bottom + 8) + "px";
+  p.classList.toggle("show");
+}
+
+/* ───────────── Main views ───────────── */
+function renderHome() {
+  const counts = {}; FILES.forEach(f => counts[f.group] = (counts[f.group] || 0) + 1);
+  const stats = Object.keys(GROUP_LABEL).filter(g => counts[g]).map(g => `<button class="stat" data-group="${g}"><b>${counts[g]}</b><span><i class="g-${g}"></i>${GROUP_LABEL[g]}</span></button>`).join("");
+  const tops = {}; FILES.forEach(f => { const t = f.path.includes("/") ? f.path.split("/")[0] : null; if (t) tops[t] = (tops[t] || 0) + 1; });
+  const cards = Object.keys(tops).sort().map(t => {
+    const latest = FILES.filter(f => f.path.startsWith(t + "/")).sort((a, b) => b.last.date.localeCompare(a.last.date))[0];
+    return `<div class="folder-card" data-folder="${esc(t)}" tabindex="0" role="link"><b>${FOLDER_SVG}${esc(t)}</b><span>${tops[t]} files · updated ${ago(latest.last.date)}</span></div>`;
+  }).join("");
+  const added = FILES.slice().sort((a, b) => b.added.date.localeCompare(a.added.date)).slice(0, 8);
+  const updated = FILES.filter(f => f.last !== f.added).sort((a, b) => b.last.date.localeCompare(a.last.date)).slice(0, 8);
+  const col = (title, list, key) => `<div class="home-col"><h3>${title}</h3>${list.length ? list.map(f => `<div class="home-file" data-file="${esc(f.path)}" tabindex="0" role="link">${tbadge(f)}<div style="min-width:0"><div class="recent-name">${esc(f.name)}</div><div class="recent-path">${esc(f.dir || "/")} · ${esc(f[key].author)}</div></div><span class="when">${ago(f[key].date)}</span></div>`).join("") : `<div class="empty-note">None yet</div>`}</div>`;
+  return `<div class="page">
+    <div class="home-title">${esc(CONFIG.title || "")}</div>
+    <div class="home-lede">${esc(CONFIG.description || "")}</div>
+    <div class="stat-row">${stats}</div>
+    <div class="section-label">Folders</div>
+    <div class="folder-cards">${cards}</div>
+    <div class="home-cols">${col("Recently added", added, "added")}${col("Recently updated", updated, "last")}</div>
+    ${BY_PATH["README.md"] ? `<div class="readme-card"><div class="readme-head">${tbadge(BY_PATH["README.md"])} README.md</div><div class="md-body" id="readmeSlot"><div class="loading">Loading...</div></div></div>` : ""}
+  </div>`;
+}
+function renderFolder(path) {
+  const inDir = FILES.filter(f => f.dir === path);
+  const subdirs = [...new Set(FILES.filter(f => f.path.startsWith(path + "/") && f.dir !== path).map(f => f.path.slice(path.length + 1).split("/")[0]))].sort((a, b) => a.localeCompare(b));
+  const readme = inDir.find(f => /^readme\.md$/i.test(f.name));
+  let h = `<div class="page">`;
+  if (readme) h += `<div class="readme-card"><div class="readme-head">${tbadge(readme)} ${esc(readme.name)}</div><div class="md-body" id="readmeSlot"><div class="loading">Loading...</div></div></div>`;
+  h += `<table class="files"><thead><tr><th>Name</th><th class="hide-sm">Last change</th><th class="num">Size</th><th class="num">Updated</th></tr></thead><tbody>`;
+  subdirs.forEach(d => {
+    const p = path + "/" + d, all = FILES.filter(f => f.path.startsWith(p + "/")), latest = all.sort((a, b) => b.last.date.localeCompare(a.last.date))[0];
+    h += `<tr class="row" data-folder="${esc(p)}" tabindex="0"><td><div class="namecell">${FOLDER_SVG}<b>${esc(d)}</b></div></td><td class="muted hide-sm">${esc(latest.last.msg)}</td><td class="num muted">${all.length} files</td><td class="num muted">${ago(latest.last.date)}</td></tr>`;
+  });
+  inDir.sort((a, b) => a.name.localeCompare(b.name)).forEach(f => {
+    h += `<tr class="row" data-file="${esc(f.path)}" tabindex="0"><td><div class="namecell">${tbadge(f)}${esc(f.name)}</div></td><td class="muted hide-sm">${esc(f.last.msg)}</td><td class="num muted">${fmtBytes(f.bytes)}</td><td class="num muted">${ago(f.last.date)}</td></tr>`;
+  });
+  if (!subdirs.length && !inDir.length) h += `<tr><td colspan="4" class="muted">No published files in this folder.</td></tr>`;
+  return h + `</tbody></table></div>`;
+}
+async function fillReadme(f, base, token) {
+  const slot = $("#readmeSlot"); if (!slot) return;
+  try {
+    const r = await renderMd(await fetchText(f), base);
+    if (token !== routeToken) return;
+    slot.replaceChildren(...r.node.childNodes);
+  } catch (e) { if (token === routeToken) slot.innerHTML = `<div class="muted">Could not load ${esc(f.name)} (${esc(e.message)}).</div>`; }
+}
+
+function fileCard(f, why) {
+  const icon = { pdf: "📄", xlsx: "📊", pptx: "📽️", docx: "📝" }[f.ext] || "📦";
+  return `<div class="file-card"><div class="big">${icon}</div><h3>${esc(f.name)}</h3><p>${fmtBytes(f.bytes)} · updated ${ago(f.last.date)} by ${esc(f.last.author)}<br>${why}</p><a class="btn" href="${fileUrl(f.path)}" download="${esc(f.name)}">Download</a> <a class="btn ghost" href="${ghUrl("blob", f.path)}" target="_blank" rel="noopener">View on GitHub</a></div>`;
+}
+function docMeta(f) {
+  return `<div class="doc-meta"><span>Updated ${ago(f.last.date)} by ${esc(f.last.author)}</span>${f.description ? `<span>· ${esc(f.description)}</span>` : ""}${f.tags.map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>`;
+}
+
+// Render a file into the main body. Async: content arrives after the frame is drawn.
+async function renderFile(f, body, token) {
+  if (f.ext === "html") {
+    const sandbox = CONFIG.sandboxHtml ? ` sandbox="allow-scripts allow-forms allow-popups"` : "";
+    const notes = f.pair && state.notesMode === "sidebar" ? `<aside class="notes-side ${docThemeClass()}"><div class="notes-inner"><div class="md-body" id="notesSlot"><div class="loading">Loading notes...</div></div></div><div class="md-footer" data-full="0"></div></aside>` : "";
+    body.innerHTML = `<div class="html-split"><div class="html-frame-wrap"><iframe id="htmlFrame" title="${esc(f.name)}"${sandbox}></iframe></div>${notes}</div>`;
+    $("#htmlFrame").src = fileUrl(f.path);
+    renderFooters();
+    if (notes) {
+      const pf = BY_PATH[f.pair];
+      try { const r = await renderMd(await fetchText(pf), pf.dir); if (token === routeToken) $("#notesSlot").replaceChildren(...r.node.childNodes); }
+      catch (e) { if (token === routeToken) $("#notesSlot").textContent = "Could not load the notes."; }
+    }
+    return;
+  }
+  if (f.ext === "pdf") { body.innerHTML = `<iframe class="pdf-frame" title="${esc(f.name)}" src="${fileUrl(f.path)}"></iframe>`; return; }
+  if (IMAGE_EXT.has(f.ext)) {
+    body.innerHTML = `<div class="media-view"><img id="mediaImg" alt="${esc(f.name)}" src="${fileUrl(f.path)}"><div class="seg"><button data-zoom="0.5">50%</button><button data-zoom="1" class="active">100%</button><button data-zoom="2">200%</button></div></div>`;
+    body.querySelectorAll("[data-zoom]").forEach(b => b.onclick = () => { $("#mediaImg").style.transform = `scale(${b.dataset.zoom})`; body.querySelectorAll("[data-zoom]").forEach(x => x.classList.toggle("active", x === b)); });
+    return;
+  }
+  const isText = f.ext === "md" || f.ext === "markdown" || TEXT_EXT.has(f.ext);
+  if (!isText) { body.innerHTML = fileCard(f, "This type has no viewer. Download it to open it."); return; }
+  if (f.bytes > (f.ext === "json" ? JSON_LIMIT : TEXT_LIMIT)) { body.innerHTML = fileCard(f, "This file is too large to show here. Download it or open it on GitHub."); return; }
+
+  body.innerHTML = `<div class="loading">Loading ${esc(f.name)}...</div>`;
+  let src;
+  try { src = await fetchText(f); } catch (e) {
+    if (token === routeToken) body.innerHTML = `<div class="error-banner">Could not load <b>${esc(f.path)}</b> (${esc(e.message)}). <a href="${ghUrl("blob", f.path)}" target="_blank" rel="noopener">Open it on GitHub</a>.</div>`;
+    return;
+  }
+  if (token !== routeToken) return;
+
+  if (f.ext === "md" || f.ext === "markdown") {
+    const r = await renderMd(src, f.dir);
+    if (token !== routeToken) return;
+    const toc = r.toc.length > 1 ? `<aside class="toc ${state.tocOn ? "" : "hidden"}"><h4>On this page</h4>${r.toc.map(t => `<a class="l${t.lv}" href="#" data-anchor="${t.id}">${esc(t.text)}</a>`).join("")}</aside>` : "";
+    body.innerHTML = `<div class="doc-page ${docThemeClass()}"><div class="doc-wrap"><article class="md-body">${docMeta(f)}</article>${toc}</div><div class="md-footer" data-full="1"></div></div>`;
+    body.querySelector("article").append(...r.node.childNodes);
+    renderFooters();
+    trackToc(body);
+    return;
+  }
+  if (f.ext === "csv" || f.ext === "tsv") {
+    body.innerHTML = `<div class="csv-wrap"><div class="csv-bar"><input id="csvFilter" placeholder="Filter rows..." aria-label="Filter rows"><span id="csvCount"></span><span>Click a column to sort</span></div><div style="overflow:auto"><table class="grid" id="csvTable"></table></div></div>`;
+    wireCsv(src, f.ext === "tsv" ? "\t" : ",");
+    return;
+  }
+  if (f.ext === "json") {
+    let v; try { v = JSON.parse(src); } catch (e) { body.innerHTML = `<div class="code-view">${codeLines(src, "json")}</div>`; return; }
+    jsonStore = []; jsonOpenDepth = f.bytes < 200000 ? 2 : 1;
+    body.innerHTML = `<div class="json-view">${jsonNode(v, null, 0)}</div>`;
+    wireJson(body.firstElementChild);
+    return;
+  }
+  if (f.group === "code" || f.group === "data") { body.innerHTML = `<div class="code-view">${codeLines(src, f.ext)}</div>`; return; }
+  body.innerHTML = `<div class="text-view">${esc(src)}</div>`;
+}
+
+/* ───────────── Markdown reader controls (Text, Width, Doc theme) ───────────── */
+const MD_TEXT_STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.35, 1.5];
+const MD_WIDTHS = ["narrow", "normal", "full"];
+const MD_THEMES = ["match", "light", "dark"];
+let mdTextScale = load(KEYS.mdTextScale, v => MD_TEXT_STEPS.includes(v), 1);
+let mdWidth = load(KEYS.mdWidth, v => MD_WIDTHS.includes(v), "normal");
+let mdDocTheme = load(KEYS.mdTheme, v => MD_THEMES.includes(v), "match");
+function applyMdReaderPrefs() {
+  document.documentElement.style.setProperty("--md-text-scale", String(mdTextScale));
+  document.documentElement.setAttribute("data-md-width", mdWidth);
+}
+applyMdReaderPrefs();
+const effectiveDocTheme = () => mdDocTheme === "match" ? (isDarkUi() ? "dark" : "light") : mdDocTheme;
+const docThemeClass = () => mdDocTheme === "match" ? "" : "doc-" + mdDocTheme;
+function applyDocTheme() {
+  document.querySelectorAll(".doc-page, .notes-side").forEach(el => { el.classList.remove("doc-light", "doc-dark"); const c = docThemeClass(); if (c) el.classList.add(c); });
+}
+const WIDTH_ICONS = {
+  narrow: `<svg viewBox="0 0 24 24"><path d="M9 5h6v14H9z"/></svg>`,
+  normal: `<svg viewBox="0 0 24 24"><path d="M6 5h12v14H6z"/></svg>`,
+  full: `<svg viewBox="0 0 24 24"><path d="M2 5h20v14H2z"/></svg>`
+};
+function footerHtml(fullPage) {
+  const step = MD_TEXT_STEPS.indexOf(mdTextScale), dark = effectiveDocTheme() === "dark";
+  const widthBtn = (val, label) => `<button title="${label}" aria-label="${label}" aria-pressed="${mdWidth === val}" class="${mdWidth === val ? "active" : ""}" data-mdwidth="${val}">${WIDTH_ICONS[val]}</button>`;
+  return `<span class="md-footer-group"><span>Text</span>` +
+    `<button title="Smaller text" aria-label="Smaller text" data-mdtext="-1"${step === 0 ? " disabled" : ""}>A&minus;</button>` +
+    `<span class="md-text-pct">${Math.round(mdTextScale * 100)}%</span>` +
+    `<button title="Larger text" aria-label="Larger text" data-mdtext="1"${step === MD_TEXT_STEPS.length - 1 ? " disabled" : ""}>A+</button></span>` +
+    (fullPage ? `<span class="md-footer-sep"></span><span class="md-footer-group"><span>Width</span>${widthBtn("narrow", "Narrow (720px)")}${widthBtn("normal", "Normal (1600px)")}${widthBtn("full", "Full width")}</span>` : "") +
+    `<span class="md-footer-sep"></span><span class="md-footer-group"><span>Doc theme</span>` +
+    `<button title="Light" aria-label="Light document" aria-pressed="${!dark}" class="${!dark ? "active" : ""}" data-mdtheme="light">&#9788;</button>` +
+    `<button title="Dark" aria-label="Dark document" aria-pressed="${dark}" class="${dark ? "active" : ""}" data-mdtheme="dark">&#9790;</button></span>`;
+}
+function renderFooters() { document.querySelectorAll(".md-footer").forEach(el => el.innerHTML = footerHtml(el.dataset.full === "1")); }
+// Run a change that reflows the document without losing the reader's place: the block at the top of
+// the view keeps the same fraction of itself above the view, so a growing table does not push the text down.
+function keepMdReadingPosition(change) {
+  const scroller = $("#mainBody"), article = scroller.querySelector(".doc-wrap .md-body");
+  const viewTop = () => scroller.getBoundingClientRect().top;
+  const anchor = article && [...article.children].find(el => el.getBoundingClientRect().bottom > viewTop());
+  let fraction = 0;
+  if (anchor) { const r = anchor.getBoundingClientRect(); fraction = r.height ? (viewTop() - r.top) / r.height : 0; }
+  change();
+  if (anchor) { const r = anchor.getBoundingClientRect(); scroller.scrollTop += r.top + fraction * r.height - viewTop(); }
+}
+// Change a preference, rebuild every doc footer to show it, and keep focus on the pressed button.
+function setMdReaderPref(selector, change) {
+  keepMdReadingPosition(() => { change(); applyMdReaderPrefs(); applyDocTheme(); });
+  renderFooters();
+  const btn = [...document.querySelectorAll(".md-footer " + selector)].find(b => !b.disabled);
+  if (btn) btn.focus();
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest(".md-footer button"); if (!b) return;
+  if (b.dataset.mdtext) {
+    const next = MD_TEXT_STEPS[MD_TEXT_STEPS.indexOf(mdTextScale) + Number(b.dataset.mdtext)];
+    if (next !== undefined) setMdReaderPref(`[data-mdtext="${b.dataset.mdtext}"]`, () => { mdTextScale = next; save(KEYS.mdTextScale, next); });
+  } else if (b.dataset.mdwidth) {
+    setMdReaderPref(`[data-mdwidth="${b.dataset.mdwidth}"]`, () => { mdWidth = b.dataset.mdwidth; save(KEYS.mdWidth, mdWidth); });
+  } else if (b.dataset.mdtheme) {
+    // Picking the theme the interface already has goes back to "match".
+    const pick = b.dataset.mdtheme;
+    setMdReaderPref(`[data-mdtheme="${pick}"]`, () => { mdDocTheme = pick === (isDarkUi() ? "dark" : "light") ? "match" : pick; save(KEYS.mdTheme, mdDocTheme); });
+  }
+  refreshSettings();
+});
+
+// Highlight the outline entry for the section in view.
+function trackToc(body) {
+  const links = [...body.querySelectorAll(".toc a")]; if (!links.length) return;
+  const heads = links.map(a => document.getElementById(a.dataset.anchor)).filter(Boolean);
+  const scroller = $("#mainBody");
+  const update = () => {
+    const top = scroller.getBoundingClientRect().top + 90;
+    let cur = heads[0];
+    for (const h of heads) { if (h.getBoundingClientRect().top <= top) cur = h; else break; }
+    links.forEach(a => a.classList.toggle("active", cur && a.dataset.anchor === cur.id));
+  };
+  scroller.onscroll = update; update();
+}
+
+/* ───────────── Sidebar width: drag the panel's right edge, or focus it and use the arrow keys ───────────── */
+(function () {
+  const MIN_W = 200, MAX_W = 550, DEFAULT_W = 300;
+  const valid = v => Number.isInteger(v) && v >= MIN_W && v <= MAX_W;
+  const panel = $("#navPanel"), handle = $("#navResize");
+  const set = w => {
+    w = Math.round(Math.max(MIN_W, Math.min(MAX_W, w)));
+    document.documentElement.style.setProperty("--nav-width", w + "px");
+    handle.setAttribute("aria-valuenow", w);
+    return w;
+  };
+  handle.setAttribute("aria-valuemin", MIN_W); handle.setAttribute("aria-valuemax", MAX_W);
+  set(load(KEYS.navWidth, valid, DEFAULT_W));
+  let startX = 0, startW = 0;
+  const move = e => set(startW + e.clientX - startX);
+  handle.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    startX = e.clientX; startW = panel.offsetWidth;
+    handle.setPointerCapture(e.pointerId); // keeps the drag when the pointer crosses an HTML page's iframe
+    panel.classList.add("resizing");
+    handle.addEventListener("pointermove", move);
+  });
+  const end = () => {
+    if (!panel.classList.contains("resizing")) return;
+    panel.classList.remove("resizing");
+    handle.removeEventListener("pointermove", move);
+    save(KEYS.navWidth, panel.offsetWidth);
+  };
+  handle.addEventListener("pointerup", end);
+  handle.addEventListener("pointercancel", end);
+  handle.addEventListener("dblclick", () => save(KEYS.navWidth, set(DEFAULT_W)));
+  handle.addEventListener("keydown", e => {
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault(); e.stopPropagation();
+    save(KEYS.navWidth, set(panel.offsetWidth + (e.key === "ArrowRight" ? 20 : -20)));
+  });
+})();
+
+/* ───────────── Settings modal (the gear in the nav footer) ───────────── */
+const INDENT_LEVELS = { // the guide line sits under the chevron's centre, which grows with Tree text
+  compact: { indent: "1.0rem", lineX: "calc(0.65rem + 6.5px * var(--tree-scale))" },
+  default: { indent: "1.55rem", lineX: "calc(0.85rem + 6.5px * var(--tree-scale))" }
+};
+const ROW_PADDING = { compact: "0.1rem", default: "0.22rem", comfortable: "0.36rem" };
+function applyTheme() {
+  if (PREFS.theme === "system") document.documentElement.removeAttribute("data-theme");
+  else document.documentElement.setAttribute("data-theme", PREFS.theme);
+  applyDocTheme(); renderFooters();
+}
+// Push every display preference into CSS variables and panel classes, then redraw the sidebar.
+function applyPrefs() {
+  const root = document.documentElement, panel = $("#navPanel");
+  root.style.setProperty("--ui-scale", PREFS.uiScale);
+  root.style.setProperty("--tree-scale", PREFS.treeScale);
+  root.style.setProperty("--tree-row-py", ROW_PADDING[PREFS.density]);
+  if (PREFS.indent === "custom") {
+    root.style.setProperty("--tree-indent", PREFS.indentCustom + "rem");
+    root.style.setProperty("--tree-line-x", Math.min(PREFS.indentCustom * 0.77, 1.2) + "rem");
+  } else {
+    root.style.setProperty("--tree-indent", INDENT_LEVELS[PREFS.indent].indent);
+    root.style.setProperty("--tree-line-x", INDENT_LEVELS[PREFS.indent].lineX);
+  }
+  const classes = {
+    "no-guide-lines": !PREFS.guideLines, zebra: PREFS.zebra, "zebra-full": PREFS.zebraSpan === "full", "zebra-medium": PREFS.zebraStrength === "medium",
+    "folder-icons": PREFS.folderIcons, "icon-accent": PREFS.iconColor === "accent", "no-type-badges": !PREFS.typeBadges,
+    "no-folder-counts": !PREFS.folderCounts, "wrap-names": PREFS.wrapNames
+  };
+  Object.entries(classes).forEach(([c, on]) => panel.classList.toggle(c, on));
+  if (FILES.length) renderSidebar(); // before the file list loads there is nothing to redraw
+}
+applyTheme(); applyPrefs();
+
+const settingsBackdrop = $("#settingsBackdrop"), settingsBtn = $("#settingsBtn"), settingsBody = $("#settingsBody");
+const settingPct = v => Math.round(v * 100) + "%";
+const SIZE_CHOICES = TEXT_SIZES.map((v, i) => [v, ["S", "M", "L", "XL"][i], settingPct(v)]);
+// The document preferences belong to the doc footer; these rows read and write the same values.
+const DOC_PREFS = {
+  mdWidth: { get: () => mdWidth, set: v => { mdWidth = v; save(KEYS.mdWidth, v); } },
+  mdTheme: { get: () => mdDocTheme, set: v => { mdDocTheme = v; save(KEYS.mdTheme, v); } }
+};
+const prefValue = k => DOC_PREFS[k] ? DOC_PREFS[k].get() : PREFS[k];
+const SETTING_CHOICES = {}; // pref -> [value, label, title][], so a button's data-val maps back to a typed value
+function settingSeg(k, choices) {
+  SETTING_CHOICES[k] = choices;
+  return `<div class="indent-track">${choices.map(([v, label, title]) => {
+    const on = prefValue(k) === v;
+    return `<button class="indent-opt ${on ? "selected" : ""}" data-pref="${k}" data-val="${v}" aria-pressed="${on}"${title ? ` title="${title}"` : ""}>${label}</button>`;
+  }).join("")}</div>`;
+}
+const settingRow = (label, control, opts = {}) => `<div class="settings-row"><div class="settings-label-row"><span class="settings-label">${label}</span>${opts.value ? `<span class="settings-value">${opts.value}</span>` : ""}</div>${control}${opts.hint ? `<div class="settings-hint">${opts.hint}</div>` : ""}</div>`;
+const settingToggle = (k, label, hint) => `<div class="settings-toggle-row"><span class="settings-toggle-name" id="lbl-${k}">${label}</span><button class="settings-toggle ${PREFS[k] ? "on" : ""}" data-toggle="${k}" role="switch" aria-checked="${PREFS[k]}" aria-labelledby="lbl-${k}"></button></div>${hint ? `<div class="settings-hint">${hint}</div>` : ""}`;
+const settingSub = rows => `<div class="settings-sub">${rows}</div>`;
+
+function renderSettings() {
+  const step = MD_TEXT_STEPS.indexOf(mdTextScale);
+  settingsBody.innerHTML = `
+    <div class="settings-modal-section">Appearance</div>
+    ${settingRow("Theme", settingSeg("theme", [["light", "Light"], ["dark", "Dark"], ["system", "System"]]), { hint: "System follows your computer. The button beside the build stamp switches between light and dark." })}
+    ${settingRow("Interface text", settingSeg("uiScale", SIZE_CHOICES), { value: settingPct(PREFS.uiScale), hint: "Panels, header, menus and the doc footer. Document text has its own size below." })}
+    <div class="settings-modal-section">Tree</div>
+    ${settingRow("Tree text", settingSeg("treeScale", SIZE_CHOICES), { value: settingPct(PREFS.treeScale), hint: "The folder tree and the New, Updated, Authors and History lists." })}
+    ${settingRow("Folder indentation", settingSeg("indent", [["compact", "Compact"], ["default", "Default"], ["custom", "Custom"]]) + (PREFS.indent === "custom" ? `<div class="custom-indent-row"><label class="custom-indent-label" for="customIndentInput">Indentation</label><div class="custom-indent-input-wrap"><input type="number" id="customIndentInput" min="0.5" max="4.0" step="0.05" value="${PREFS.indentCustom}" /><span class="custom-indent-unit">rem</span></div></div>` : ""))}
+    ${settingRow("Row density", settingSeg("density", [["compact", "Compact"], ["default", "Default"], ["comfortable", "Comfortable"]]))}
+    ${settingRow("Sort", settingSeg("sort", [["name", "Name"], ["updated", "Recently updated"]]))}
+    ${settingToggle("guideLines", "Vertical guide lines")}
+    ${settingToggle("zebra", "Alternating row colors")}
+    ${PREFS.zebra ? settingSub(settingRow("Stripes", settingSeg("zebraSpan", [["full", "Full row"], ["indent", "From indent"]])) + settingRow("Strength", settingSeg("zebraStrength", [["subtle", "Subtle"], ["medium", "Medium"]]))) : ""}
+    ${settingToggle("folderIcons", "Folder icons", "A closed or open folder beside each folder name.")}
+    ${PREFS.folderIcons ? settingSub(settingRow("Style", settingSeg("iconStyle", [["outline", "Outline"], ["filled", "Filled"]])) + settingRow("Color", settingSeg("iconColor", [["muted", "Muted"], ["accent", "Accent"]]))) : ""}
+    ${settingToggle("typeBadges", "File type badges")}
+    ${settingToggle("folderCounts", "Item counts on folders")}
+    ${settingToggle("wrapNames", "Wrap long names")}
+    ${settingToggle("reveal", "Reveal the open file", "Opens its folders and scrolls the tree to it.")}
+    <div class="settings-modal-section">Lists</div>
+    ${settingRow("Start on tab", settingSeg("defaultTab", [["folders", "Folders"], ["added", "New"], ["updated", "Updated"], ["authors", "Authors"], ["history", "History"]]), { hint: "The tab the panel opens on when you load the site." })}
+    ${settingRow("New and Updated show", settingSeg("recentDays", [[0, "Latest"], [7, "7 days"], [30, "30 days"], [90, "90 days"]]), { hint: "Latest is the last 40 commits." })}
+    <div class="settings-modal-section">Documents</div>
+    ${settingRow("Text", `<div class="settings-stepper"><button data-mdstep="-1" aria-label="Smaller document text"${step === 0 ? " disabled" : ""}>A&minus;</button><span class="settings-value">${settingPct(mdTextScale)}</span><button data-mdstep="1" aria-label="Larger document text"${step === MD_TEXT_STEPS.length - 1 ? " disabled" : ""}>A+</button></div>`)}
+    ${settingRow("Width", settingSeg("mdWidth", [["narrow", "Narrow"], ["normal", "Normal"], ["full", "Full"]]))}
+    ${settingRow("Doc theme", settingSeg("mdTheme", [["match", "Match"], ["light", "Light"], ["dark", "Dark"]]), { hint: "The same settings as the doc footer." })}`;
+}
+// Redraw the modal if it is open, keeping focus on the control that was pressed.
+function refreshSettings(focusSel) {
+  if (!settingsBackdrop.classList.contains("open")) return;
+  const top = settingsBody.scrollTop;
+  renderSettings();
+  settingsBody.scrollTop = top;
+  const el = focusSel && settingsBody.querySelector(focusSel); if (el) el.focus();
+}
+function closeSettings() { settingsBackdrop.classList.remove("open"); settingsBtn.classList.remove("active"); }
+// A document preference reflows the page; keep the reader's place and redraw the doc footers.
+function changeDocPref(change) { keepMdReadingPosition(() => { change(); applyMdReaderPrefs(); applyDocTheme(); }); renderFooters(); }
+
+settingsBtn.onclick = e => {
+  e.stopPropagation();
+  const open = settingsBackdrop.classList.toggle("open"); settingsBtn.classList.toggle("active", open);
+  if (open) { renderSettings(); settingsBody.scrollTop = 0; const first = settingsBody.querySelector(".selected"); if (first) first.focus(); }
+};
+settingsBackdrop.onclick = e => { if (e.target === settingsBackdrop) closeSettings(); };
+$("#settingsClose").onclick = closeSettings;
+document.addEventListener("keydown", e => { if (e.key === "Escape" && settingsBackdrop.classList.contains("open")) { e.stopImmediatePropagation(); closeSettings(); settingsBtn.focus(); } });
+settingsBody.addEventListener("click", e => {
+  const b = e.target.closest("[data-pref], [data-toggle], [data-mdstep]"); if (!b) return;
+  if (b.dataset.toggle) {
+    const k = b.dataset.toggle; PREFS[k] = !PREFS[k]; savePref(k); applyPrefs(); refreshSettings(`[data-toggle="${k}"]`);
+  } else if (b.dataset.mdstep) {
+    const next = MD_TEXT_STEPS[MD_TEXT_STEPS.indexOf(mdTextScale) + Number(b.dataset.mdstep)];
+    if (next !== undefined) changeDocPref(() => { mdTextScale = next; save(KEYS.mdTextScale, next); });
+    refreshSettings(`[data-mdstep="${b.dataset.mdstep}"]:not(:disabled)`);
+  } else {
+    const k = b.dataset.pref, v = SETTING_CHOICES[k].find(([val]) => String(val) === b.dataset.val)[0];
+    if (DOC_PREFS[k]) changeDocPref(() => DOC_PREFS[k].set(v));
+    else { PREFS[k] = v; savePref(k); if (k === "theme") applyTheme(); else applyPrefs(); }
+    refreshSettings(`[data-pref="${k}"][data-val="${b.dataset.val}"]`);
+  }
+});
+settingsBody.addEventListener("input", e => {
+  if (e.target.id !== "customIndentInput") return;
+  const v = parseFloat(e.target.value);
+  if (!PREF_SPEC.indentCustom[1](v)) return; // ignored while typing
+  PREFS.indentCustom = Math.round(v * 100) / 100; savePref("indentCustom"); applyPrefs();
+});
+$("#settingsReset").onclick = () => {
+  Object.entries(PREF_SPEC).forEach(([k, spec]) => { PREFS[k] = spec[2]; savePref(k); });
+  changeDocPref(() => { mdTextScale = 1; mdWidth = "normal"; mdDocTheme = "match"; save(KEYS.mdTextScale, 1); save(KEYS.mdWidth, "normal"); save(KEYS.mdTheme, "match"); });
+  applyTheme(); applyPrefs(); refreshSettings();
+};
+
+/* ───────────── Search (names, folders, descriptions and tags) ───────────── */
+function searchFiles(q, group, folder) {
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return [];
+  return FILES.filter(f => (group === "all" || f.group === group) && (folder === "all" || f.path.startsWith(folder + "/"))).map(f => {
+    const name = f.name.toLowerCase(), path = f.path.toLowerCase(), meta = (f.description + " " + f.tags.join(" ")).toLowerCase();
+    let score = 0;
+    for (const t of terms) {
+      const s = (name.includes(t) ? 10 : 0) + (path.includes(t) ? 4 : 0) + (meta.includes(t) ? 3 : 0);
+      if (!s) return null;
+      score += s;
+    }
+    let snip = f.description ? esc(f.description) : "";
+    if (snip) terms.forEach(t => { snip = snip.replace(new RegExp("(" + esc(t).replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi"), "<mark>$1</mark>"); });
+    return { f, score, snip };
+  }).filter(Boolean).sort((a, b) => b.score - a.score || b.f.last.date.localeCompare(a.f.last.date));
+}
+function renderSearchPage(q) {
+  const res = searchFiles(q, state.searchGroup, state.searchFolder);
+  const groups = ["all", "md", "html", "data", "code", "media"], folders = ["all", ...new Set(FILES.filter(f => f.dir).map(f => f.path.split("/")[0]))];
+  const facet = (val, cur, label, attr) => `<button class="facet ${val === cur ? "active" : ""}" ${attr}="${esc(val)}">${esc(label)}</button>`;
+  return `<div class="page search-page">
+    <div class="search-box"><input id="searchPageInput" value="${esc(q)}" placeholder="Find files by name, folder, description or tag" aria-label="Find files"></div>
+    <div class="facets"><span class="facet-label">Type</span>${groups.map(g => facet(g, state.searchGroup, g === "all" ? "All" : GROUP_LABEL[g], "data-sg")).join("")}</div>
+    <div class="facets"><span class="facet-label">Folder</span>${folders.map(g => facet(g, state.searchFolder, g === "all" ? "Anywhere" : g, "data-sf")).join("")}</div>
+    <div class="result-count">${q ? `${res.length} file${res.length === 1 ? "" : "s"} match <b>${esc(q)}</b>` : "Type to find files. Matches in file names rank first, then folders, then front matter descriptions and tags. Searching inside files comes later."}</div>
+    ${res.slice(0, 200).map(r => `<div class="result" data-file="${esc(r.f.path)}" tabindex="0" role="link">
+      <div class="result-title">${tbadge(r.f)}${esc(r.f.name)}</div>
+      <div class="result-path">${esc(r.f.path)}</div>
+      ${r.snip ? `<div class="result-snip">${r.snip}</div>` : ""}
+      <div class="result-meta">updated ${ago(r.f.last.date)} by ${esc(r.f.last.author)}</div>
+    </div>`).join("")}
+  </div>`;
+}
+
+/* ───────────── Palette ───────────── */
+let palSel = 0, palRes = [];
+function openPalette(q) {
+  $("#paletteBackdrop").classList.add("show");
+  const inp = $("#paletteInput"); inp.value = q || ""; palSel = 0; drawPalette(); inp.focus();
+}
+function closePalette() { $("#paletteBackdrop").classList.remove("show"); }
+function drawPalette() {
+  const q = $("#paletteInput").value.trim();
+  palRes = q ? searchFiles(q, "all", "all").slice(0, 10) : FILES.slice().sort((a, b) => b.last.date.localeCompare(a.last.date)).slice(0, 6).map(f => ({ f }));
+  palSel = Math.min(palSel, Math.max(0, palRes.length - 1));
+  $("#paletteList").innerHTML = (q ? "" : `<div class="group-head">Recently updated</div>`) + (palRes.length ? palRes.map((r, i) => `<div class="palette-item ${i === palSel ? "sel" : ""}" data-i="${i}">${tbadge(r.f)}<div style="min-width:0"><div class="recent-name">${esc(r.f.name)} <span class="recent-path">${esc(r.f.dir)}</span></div>${r.snip ? `<div class="snip">${r.snip}</div>` : ""}</div></div>`).join("") : `<div class="empty-note">No matches.</div>`);
+  $("#paletteAll").innerHTML = q ? `<a href="#/search?q=${encodeURIComponent(q)}" id="palAllLink">See all results</a>` : "";
+  const al = $("#palAllLink"); if (al) al.onclick = closePalette;
+  $("#paletteList").querySelectorAll(".palette-item").forEach(el => el.onclick = () => { closePalette(); go("#/p/" + palRes[+el.dataset.i].f.path); });
+  const sel = $("#paletteList .sel"); if (sel) sel.scrollIntoView({ block: "nearest" });
+}
+
+/* ───────────── Routing ───────────── */
+let routeToken = 0;
+function parseRoute() {
+  let h = location.hash || "#/";
+  try { h = decodeURIComponent(h); } catch (e) { /* keep the raw hash */ }
+  if (h.startsWith("#/p/")) {
+    const rest = h.slice(4), at = rest.indexOf("#");
+    let path = at < 0 ? rest : rest.slice(0, at);
+    const anchor = at < 0 ? null : rest.slice(at + 1);
+    if (!BY_PATH[path] && RENAMES[path]) path = RENAMES[path];
+    if (BY_PATH[path]) return { kind: "p", path, anchor };
+    return { kind: "missing", path };
+  }
+  if (h.startsWith("#/f/")) return { kind: "f", path: h.slice(4).replace(/\/$/, "") };
+  if (h.startsWith("#/search")) return { kind: "search", q: (h.split("?q=")[1] || "") };
+  return { kind: "home" };
+}
+function go(h) { if (location.hash === h) renderRoute(true); else location.hash = h; }
+function scrollToAnchor(id) { const t = id && document.getElementById(id); if (t) t.scrollIntoView({ block: "start" }); }
+async function renderRoute(force) {
+  const prev = state.route, r = parseRoute(), body = $("#mainBody");
+  $("#infoPopover").classList.remove("show");
+  closeMenu();
+  // Only the anchor changed: scroll, do not re-render.
+  if (!force && prev && r.kind === "p" && prev.kind === "p" && prev.path === r.path && r.anchor !== prev.anchor) { state.route = r; scrollToAnchor(r.anchor); return; }
+  state.route = r;
+  const token = ++routeToken;
+  body.onscroll = null;
+  if ((r.kind === "p" || r.kind === "f") && PREFS.reveal) {
+    const dir = r.kind === "p" ? BY_PATH[r.path].dir : r.path; let acc = [];
+    dir.split("/").filter(Boolean).forEach(s => { acc.push(s); state.open.add(acc.join("/")); });
+    saveOpen();
+  }
+  if (r.kind === "missing") {
+    body.innerHTML = `<div class="error-banner"><b>${esc(r.path)}</b> is not on this site. It may have moved, been deleted, or be excluded from publishing. <a href="${ghUrl("blob", r.path)}" target="_blank" rel="noopener">Look for it on GitHub</a>.</div>`;
+    document.title = "Not found · " + CONFIG.title;
+    renderHeader(); renderSidebar();
+    return;
+  }
+  renderHeader(); renderSidebar();
+  if (PREFS.reveal) revealActive();
+  body.scrollTop = 0;
+  if (r.kind === "p") {
+    const f = BY_PATH[r.path];
+    const hist = load(KEYS.history, isStrList, []).filter(p => p !== f.path); hist.unshift(f.path); save(KEYS.history, hist.slice(0, 30));
+    document.title = f.name + " · " + CONFIG.title;
+    await renderFile(f, body, token);
+    if (token === routeToken && r.anchor) scrollToAnchor(r.anchor);
+    if (state.view === "history") renderSidebar();
+  } else if (r.kind === "f") {
+    body.innerHTML = renderFolder(r.path); document.title = r.path + " · " + CONFIG.title;
+    const rd = FILES.find(f => f.dir === r.path && /^readme\.md$/i.test(f.name));
+    if (rd) fillReadme(rd, r.path, token);
+  } else if (r.kind === "search") {
+    body.innerHTML = renderSearchPage(r.q); document.title = "Find · " + CONFIG.title;
+    const inp = $("#searchPageInput"); inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length);
+    inp.oninput = () => { clearTimeout(inp._t); inp._t = setTimeout(() => { history.replaceState(null, "", "#/search?q=" + encodeURIComponent(inp.value)); renderRoute(true); }, 180); };
+    body.querySelectorAll("[data-sg]").forEach(b => b.onclick = () => { state.searchGroup = b.dataset.sg; renderRoute(true); });
+    body.querySelectorAll("[data-sf]").forEach(b => b.onclick = () => { state.searchFolder = b.dataset.sf; renderRoute(true); });
+  } else {
+    body.innerHTML = renderHome(); document.title = CONFIG.title;
+    body.querySelectorAll("[data-group]").forEach(s => s.onclick = () => { state.group = s.dataset.group; syncTypeFilter(); renderSidebar(); });
+    if (BY_PATH["README.md"]) fillReadme(BY_PATH["README.md"], "", token);
+  }
+}
+
+/* ───────────── Events ───────────── */
+function syncTypeFilter() { document.querySelectorAll(".type-filter-btn").forEach(b => b.classList.toggle("active", b.dataset.g === state.group)); }
+function toggleNav() {
+  const p = $("#navPanel");
+  if (window.innerWidth <= 860) { p.classList.toggle("mobile-open"); return; }
+  setFloating(false);
+  const collapsed = p.classList.toggle("collapsed");
+  document.body.classList.toggle("nav-collapsed", collapsed);
+  save(KEYS.navCollapsed, collapsed);
+}
+// Restore a collapsed panel without the slide animation.
+if (load(KEYS.navCollapsed, v => typeof v === "boolean", false)) {
+  const p = $("#navPanel");
+  p.style.transition = "none"; p.classList.add("collapsed"); document.body.classList.add("nav-collapsed");
+  void p.offsetWidth; p.style.transition = "";
+}
+// Browse: show the collapsed panel floating over the page, or put it away again. No slide animation
+// between floating and hidden, so the panel never passes through the page layout on the way.
+function setFloating(on) {
+  const p = $("#navPanel");
+  on = on && p.classList.contains("collapsed") && window.innerWidth > 860;
+  if (on === p.classList.contains("floating")) return;
+  p.style.transition = "none";
+  p.classList.toggle("floating", on);
+  void p.offsetWidth;
+  p.style.transition = "";
+  syncBrowseBtn();
+  if (on) revealActive();
+}
+function syncBrowseBtn() {
+  const b = $("#browseBtn"), on = $("#navPanel").classList.contains("floating");
+  if (b) { b.classList.toggle("active", on); b.setAttribute("aria-expanded", on); }
+}
+// A click outside the floating panel closes it. Capture phase: a folder toggle re-renders the tree,
+// so later handlers would see a target that is no longer inside the panel.
+document.addEventListener("click", e => {
+  if ($("#navPanel").classList.contains("floating") && !e.target.closest("#navPanel, #browseBtn, #menu, #paletteBackdrop")) setFloating(false);
+}, true);
+document.addEventListener("click", e => {
+  const anchor = e.target.closest("[data-anchor]");
+  if (anchor) { e.preventDefault(); scrollToAnchor(anchor.dataset.anchor); return; }
+  const crumb = e.target.closest(".crumb");
+  if (crumb) { openMenu(crumb, folderMenu(crumb.dataset.crumb)); return; }
+  const counter = e.target.closest("#fileCounter");
+  if (counter) { openMenu(counter, jumpMenu(BY_PATH[state.route.path])); return; }
+  if (!e.target.closest("#menu")) closeMenu();
+  const file = e.target.closest("[data-file]"), folder = e.target.closest("[data-folder]");
+  if (!e.target.closest(".info-wrap") && !e.target.closest("#infoPopover")) $("#infoPopover").classList.remove("show");
+  // Picking from the panel closes the mobile drawer and the floating Browse panel.
+  const closePanel = el => { if (!el.closest("#navView")) return; setFloating(false); if (window.innerWidth <= 860) $("#navPanel").classList.remove("mobile-open"); };
+  if (file && !e.target.closest("a")) { go("#/p/" + file.dataset.file); closePanel(file); return; }
+  if (folder) {
+    const p = folder.dataset.folder;
+    if (folder.classList.contains("tree-folder") && !e.target.closest(".tree-name")) { state.open.has(p) ? state.open.delete(p) : state.open.add(p); saveOpen(); renderSidebar(); return; }
+    go("#/f/" + p);
+    closePanel(folder);
+  }
+});
+// Menu keys: arrows move, Enter opens (the row handler below), Escape or Tab closes.
+$("#menu").addEventListener("keydown", e => {
+  const items = [...$("#menu").querySelectorAll(".menu-item")], i = items.indexOf(document.activeElement);
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    e.preventDefault(); e.stopPropagation();
+    const n = items[e.key === "ArrowDown" ? Math.min(i + 1, items.length - 1) : Math.max(i - 1, 0)];
+    if (n) n.focus();
+  } else if (e.key === "Home" || e.key === "End") { e.preventDefault(); items[e.key === "Home" ? 0 : items.length - 1].focus(); }
+  else if (e.key === "Escape" || e.key === "Tab") { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+  else if (e.key === "Enter" && document.activeElement.tagName === "A") { e.preventDefault(); document.activeElement.click(); }
+  else if (e.key === "ArrowLeft" || e.key === "ArrowRight") e.stopPropagation();
+});
+window.addEventListener("resize", () => closeMenu());
+window.addEventListener("blur", () => closeMenu()); // a click inside an HTML page's frame never reaches this document
+$("#mainBody").addEventListener("scroll", () => closeMenu(), { passive: true });
+// Rows that act as links or buttons open with Enter or Space too.
+document.addEventListener("keydown", e => {
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches("[data-file][tabindex], [data-folder][tabindex]")) {
+    e.preventDefault();
+    if (e.target.classList.contains("tree-folder")) { const p = e.target.dataset.folder; state.open.has(p) ? state.open.delete(p) : state.open.add(p); saveOpen(); renderSidebar(); const again = document.querySelector(`.tree-folder[data-folder="${CSS.escape(p)}"]`); if (again) again.focus(); }
+    else e.target.click();
+  }
+});
+document.querySelectorAll(".nav-tab").forEach(t => t.onclick = () => { state.view = t.dataset.view; document.querySelectorAll(".nav-tab").forEach(x => x.classList.toggle("active", x === t)); renderSidebar(); });
+document.querySelectorAll(".type-filter-btn").forEach(b => b.onclick = () => { state.group = b.dataset.g; syncTypeFilter(); renderSidebar(); });
+$("#filterInput").oninput = e => { state.filter = e.target.value; renderSidebar(); };
+$("#expandAll").onclick = () => { DIRS.forEach(d => state.open.add(d)); saveOpen(); renderSidebar(); };
+$("#collapseAll").onclick = () => { state.open.clear(); saveOpen(); renderSidebar(); };
+$("#navCollapseBtn").onclick = toggleNav;
+$("#navDockBtn").onclick = toggleNav;
+$("#navFloatClose").onclick = () => setFloating(false);
+$("#homeBtn").onclick = () => go("#/");
+$("#siteTitle").onclick = () => go("#/");
+$("#searchTrigger").onclick = () => openPalette();
+$("#searchChip").onclick = () => openPalette();
+$("#shareBtn").onclick = () => { const u = location.href; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast("Link copied"), () => toast(u)); };
+$("#themeToggle").onclick = () => { PREFS.theme = isDarkUi() ? "light" : "dark"; savePref("theme"); applyTheme(); refreshSettings(); };
+// System theme: the CSS follows the OS by itself; the doc footer's theme buttons need redrawing.
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (PREFS.theme === "system") { applyDocTheme(); renderFooters(); } });
+$("#paletteBackdrop").onclick = e => { if (e.target.id === "paletteBackdrop") closePalette(); };
+$("#paletteInput").oninput = () => { palSel = 0; drawPalette(); };
+$("#paletteInput").onkeydown = e => {
+  if (e.key === "ArrowDown") { palSel = Math.min(palSel + 1, palRes.length - 1); drawPalette(); e.preventDefault(); }
+  else if (e.key === "ArrowUp") { palSel = Math.max(palSel - 1, 0); drawPalette(); e.preventDefault(); }
+  else if (e.key === "Enter" && palRes[palSel]) { closePalette(); go("#/p/" + palRes[palSel].f.path); }
+  else if (e.key === "Escape") closePalette();
+};
+document.addEventListener("keydown", e => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || document.activeElement.isContentEditable;
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); openPalette(); return; }
+  if (e.key === "Escape" && $("#menu").classList.contains("show")) { closeMenu(true); return; }
+  if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key === "/") { e.preventDefault(); openPalette(); }
+  else if (e.key === "?") { const c = $("#fileCounter"); if (c) { e.preventDefault(); c.click(); } }
+  else if (e.key === "[") toggleNav();
+  else if (e.key === "Escape") { closePalette(); if (!$("#settingsBackdrop").classList.contains("open")) setFloating(false); }
+  else if (state.route && state.route.kind === "p" && (e.key === "ArrowRight" || e.key === "ArrowLeft")) { const b = $(e.key === "ArrowRight" ? "#nextBtn" : "#prevBtn"); if (b && !b.disabled) b.click(); }
+});
+window.addEventListener("hashchange", () => renderRoute());
+
+/* ───────────── Boot ───────────── */
+fetch("site-data.json", { cache: "no-cache" })
+  .then(r => { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.json(); })
+  .then(d => {
+    loadData(d);
+    if (state.openIsDefault) DIRS.forEach(p => { if (!p.includes("/")) state.open.add(p); }); // first visit: top-level folders open
+    $("#siteTitle").textContent = $("#navTitle").textContent = CONFIG.title || "Files";
+    $("#ghChip").href = CONFIG.repoUrl || "#";
+    $("#readmeChip").style.display = BY_PATH["README.md"] ? "" : "none";
+    document.querySelectorAll(".nav-tab").forEach(t => t.classList.toggle("active", t.dataset.view === state.view)); // Settings > Start on tab
+    $("#buildStamp").innerHTML = `Built ${esc(ago(CONFIG.builtAt))}` + (CONFIG.sha ? ` from <a href="${CONFIG.repoUrl}/commit/${CONFIG.sha}" target="_blank" rel="noopener">${esc(CONFIG.sha.slice(0, 7))}</a>` : "");
+    renderRoute();
+  })
+  .catch(e => {
+    $("#mainBody").innerHTML = `<div class="error-banner">The file list did not load (${esc(e.message)}). Reload the page; if this keeps happening, check the latest Pages workflow run.</div>`;
+  });
+</script>
+</body>
+</html>
