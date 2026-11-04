@@ -33,7 +33,7 @@ Use `python` on Windows if `python3` is not found. Set `RB_BROWSER_CHANNEL=msedg
 - **Search before merging.** If `_local/scrub-terms.txt` exists, search the whole diff with `git grep -IiE -f _local/scrub-terms.txt`. A hit blocks the merge. Never commit that file or quote its terms.
 - **Keep the demo honest.** The demo must come from the current viewer and generator. Do not commit the built page, because its dates change on every build.
 - **Treat the demo as public.** Pushes to `main` publish it to <https://projects.prisantlabs.com/repo-pages/>, although this repository is private. Anything in the viewer or `examples/` becomes readable by anyone.
-- **Keep the viewer dependency-free.** It has no frontend build step and loads nothing from the network. Add third-party code only with a pinned version, a recorded hash and an entry in `THIRD-PARTY-NOTICES.md`.
+- **Keep the viewer dependency-free.** It has no frontend build step and loads nothing from the network. Add third-party code only with a pinned version, a recorded hash and an entry in `THIRD-PARTY-NOTICES.md`. Keep the Lucide notice comment at the top of `viewer/index.html`, because built pages must carry it.
 - **Respect the registry.** Add a reader setting through `KEYS` and `PREF_SPEC`, so it gets validation and Reset. Validate everything read from browser storage.
 - **Respect the rejected list.** Do not add anything under "Deliberately left out" in `docs/settings-spec.md` without a new decision.
 - **Check geometry.** After changing tree CSS, confirm the default guide line still passes through the chevron center at every Tree text size. `docs/design.md` has the formulas.

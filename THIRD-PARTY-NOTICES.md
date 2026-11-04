@@ -10,6 +10,8 @@ The viewer ships two vendored libraries and uses icon shapes from a third projec
 
 ## Lucide
 
+The same notice is in a comment at the top of `viewer/index.html`, so every build carries it. Keep the two in step.
+
 ```text
 ISC License
 
