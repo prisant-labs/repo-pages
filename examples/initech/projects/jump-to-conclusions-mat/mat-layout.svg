@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 260" font-family="Arial, sans-serif">
+  <title>Jump to Conclusions Mat layout</title>
+  <rect width="360" height="260" rx="16" fill="#1f6f8b"/>
+  <g fill="#f9d65c" stroke="#16495c" stroke-width="2">
+    <rect x="20" y="20" width="100" height="66" rx="6"/><rect x="130" y="20" width="100" height="66" rx="6"/><rect x="240" y="20" width="100" height="66" rx="6"/>
+    <rect x="20" y="97" width="100" height="66" rx="6"/><rect x="130" y="97" width="100" height="66" rx="6" fill="#e4572e"/><rect x="240" y="97" width="100" height="66" rx="6"/>
+    <rect x="20" y="174" width="100" height="66" rx="6"/><rect x="130" y="174" width="100" height="66" rx="6"/><rect x="240" y="174" width="100" height="66" rx="6"/>
+  </g>
+  <g font-size="13" font-weight="700" text-anchor="middle" fill="#1d2433">
+    <text x="70" y="58">YES</text><text x="180" y="58">NO</text><text x="290" y="58">MAYBE</text>
+    <text x="70" y="135">COVER SHEET</text><text x="180" y="135" fill="#fff">JUMP AGAIN</text><text x="290" y="135">SATURDAY</text>
+    <text x="70" y="212">ASK BILL</text><text x="180" y="212">FIRE THEM</text><text x="290" y="212">TPS REPORT</text>
+  </g>
+</svg>

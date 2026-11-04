@@ -1,0 +1,7 @@
+segment,households,adoption_rate,mats_per_household,price,revenue
+Offices,250000,0.02,1,29.99,149950
+Families with children,30000000,0.001,1,29.99,899700
+Dinner party hosts,4000000,0.0005,1,29.99,59980
+Sports fans,12000000,0.0002,2,29.99,143952
+Management consultants,80000,0.05,3,29.99,359880
+Total,,,,,1613462

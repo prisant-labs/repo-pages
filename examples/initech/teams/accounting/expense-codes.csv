@@ -1,0 +1,9 @@
+code,category,limit,needs_receipt,needs_cover_sheet,example
+E100,Travel,500,yes,yes,Client visit
+E110,Meals,25,yes,yes,Lunch at Chotchkie's
+E120,Office supplies,50,yes,no,Pens; not staplers
+E130,Training,1000,yes,yes,Seminar on self-esteem
+E140,Software,200,yes,yes,A licence Michael needed
+E150,Hardware,300,yes,yes,A new printer
+E160,Entertainment,0,n/a,n/a,Not reimbursed
+E170,Cake,40,yes,no,Monthly birthday cake; order enough plates

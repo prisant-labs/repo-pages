@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 140">
+  <title>A red stapler</title>
+  <ellipse cx="150" cy="122" rx="128" ry="10" fill="#000" opacity=".12"/>
+  <rect x="30" y="96" width="240" height="20" rx="8" fill="#8f1d1d"/>
+  <path d="M40 96 Q60 40 140 40 L262 52 Q276 56 270 70 L250 94 Z" fill="#d62828"/>
+  <path d="M60 80 Q80 52 140 52 L250 60" fill="none" stroke="#ff8a80" stroke-width="5" stroke-linecap="round" opacity=".6"/>
+  <circle cx="58" cy="98" r="7" fill="#444"/>
+  <rect x="236" y="92" width="34" height="6" rx="2" fill="#bbb"/>
+</svg>

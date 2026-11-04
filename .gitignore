@@ -1,0 +1,5 @@
+_local/
+_site/
+__pycache__/
+node_modules/
+.playwright-mcp/

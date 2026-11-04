@@ -1,0 +1,15 @@
+{
+  "exported": "from the HR system, weekly",
+  "company": "Initech",
+  "employees": [
+    { "id": 101, "name": "Bill Lumbergh", "title": "Division Vice President", "floor": 4, "reports": [102, 103, 104, 105, 106], "car": "Porsche, parked in the vice president's spot", "mug": "Initech" },
+    { "id": 102, "name": "Peter Gibbons", "title": "Programmer", "floor": 4, "managers": [101, 107, 108, 109, 110, 111, 112, 113], "projects": ["Y2K remediation"], "hobbies": ["fishing", "doing nothing"] },
+    { "id": 103, "name": "Michael Bolton", "title": "Programmer", "floor": 4, "managers": [101], "projects": ["Ledger", "Printing"], "favorite_music": "rap" },
+    { "id": 104, "name": "Samir Nagheenanajar", "title": "Programmer", "floor": 4, "managers": [101], "projects": ["Interest calculation"] },
+    { "id": 105, "name": "Tom Smykowski", "title": "Customer Relations", "floor": 4, "skills": ["takes specifications from customers", "brings them to engineers", "people skills"], "side_projects": ["Jump to Conclusions Mat"] },
+    { "id": 106, "name": "Milton Waddams", "title": "Collating", "floor": "B", "stapler": { "color": "red", "owner": "Milton", "location": "storage room B" }, "payroll": { "active": false, "note": "Fixed. Do not mention it" } },
+    { "id": 107, "name": "Nina", "title": "Front Desk and Corporate Accounts Payable", "floor": 3 },
+    { "id": 120, "name": "Bob Slydell", "title": "Consultant", "contract": { "ends": "after the review", "deliverable": "recommendations" } },
+    { "id": 121, "name": "Bob Porter", "title": "Consultant", "contract": { "ends": "after the review", "deliverable": "recommendations" } }
+  ]
+}

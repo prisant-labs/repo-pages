@@ -1,0 +1,23 @@
+# Initech dental plan, as exported from the benefits system.
+plan: Initech Basic Dental
+carrier: Smile Mutual (fictional)
+effective: first of the month after 90 days
+coverage:
+  preventive:
+    cleanings_per_year: 2
+    xrays_per_year: 1
+    covered_percent: 100
+  basic:
+    fillings: 80
+    extractions: 80
+  major:
+    crowns: 50
+    bridges: 50
+    braces: 0
+deductible:
+  individual: 50
+  family: 150
+annual_maximum: 1000
+notes:
+  - Claims need a cover sheet.
+  - Hypnotherapy is not dental care, even if your jaw was clenched.

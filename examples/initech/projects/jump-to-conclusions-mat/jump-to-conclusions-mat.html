@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jump to Conclusions Mat</title>
+<style>
+  :root { --bg: #f4efe6; --ink: #1d2433; --mat: #1f6f8b; --cell: #f9d65c; --hit: #e4572e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--ink); display: grid; place-items: center; min-height: 100vh; padding: 24px; }
+  h1 { margin: 0 0 4px; font-size: 1.6rem; }
+  p { margin: 0 0 16px; color: #555; }
+  .mat { background: var(--mat); padding: 14px; border-radius: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: min(520px, 92vw); box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+  .cell { background: var(--cell); border-radius: 8px; aspect-ratio: 1.4; display: grid; place-items: center; text-align: center; font-weight: 800; font-size: clamp(.7rem, 2.4vw, 1rem); padding: 6px; transition: transform .15s, background .15s; }
+  .cell.hit { background: var(--hit); color: #fff; transform: scale(1.06); }
+  .controls { margin-top: 18px; display: flex; gap: 10px; align-items: center; }
+  button { font: inherit; font-weight: 700; padding: 10px 18px; border-radius: 999px; border: 0; background: var(--ink); color: #fff; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  #result { font-weight: 700; min-height: 1.5em; }
+  .tally { margin-top: 14px; font-size: .85rem; color: #555; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Jump to Conclusions Mat</h1>
+  <p>Ask a question. Jump. Conclude.</p>
+  <div class="mat" id="mat"></div>
+  <div class="controls"><button id="jump">Jump!</button><span id="result" aria-live="polite"></span></div>
+  <div class="tally" id="tally">No conclusions jumped to yet.</div>
+</main>
+<script>
+  const CONCLUSIONS = ["YES", "NO", "MAYBE", "COVER SHEET", "JUMP AGAIN", "SATURDAY", "ASK BILL", "FIRE THEM", "TPS REPORT"];
+  const mat = document.getElementById("mat"), btn = document.getElementById("jump"), out = document.getElementById("result"), tally = document.getElementById("tally");
+  const counts = {};
+  mat.innerHTML = CONCLUSIONS.map(c => `<div class="cell">${c}</div>`).join("");
+  const cells = [...mat.children];
+  btn.onclick = () => {
+    btn.disabled = true; out.textContent = "";
+    let hops = 10 + Math.floor(Math.random() * 8), i = 0;
+    const tick = () => {
+      cells.forEach(c => c.classList.remove("hit"));
+      i = Math.floor(Math.random() * cells.length); cells[i].classList.add("hit");
+      if (--hops > 0) return setTimeout(tick, 70 + (18 - hops) * 12);
+      const c = CONCLUSIONS[i]; counts[c] = (counts[c] || 0) + 1;
+      out.textContent = "Conclusion: " + c;
+      tally.textContent = Object.entries(counts).map(([k, v]) => k + " x" + v).join(" · ");
+      btn.disabled = false;
+    };
+    tick();
+  };
+</script>
+</body>
+</html>

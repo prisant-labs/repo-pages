@@ -1,0 +1,11 @@
+employee,team,day,time,room,status,bobs_notes
+Peter Gibbons,Software,Monday,9:00,Conference B,done,Very candid. Management material
+Michael Bolton,Software,Monday,10:00,Conference B,done,Name is familiar. Asked about it. He did not want to discuss it
+Samir Nagheenanajar,Software,Monday,11:00,Conference B,done,Nobody can pronounce his name. Including us
+Tom Smykowski,Customer Relations,Monday,1:00,Conference B,done,Takes specifications from customers to engineers. Has people skills
+Milton Waddams,Collating,Tuesday,9:00,Conference B,no-show,Could not find him. Check payroll
+Nina,Front Desk,Tuesday,10:00,Conference B,done,Very busy. Phone rang four times
+Bill Lumbergh,Management,Tuesday,11:00,Corner office,done,Supportive of the process
+Drew,Software,Tuesday,1:00,Conference B,rescheduled,Out on Friday for a Hawaiian shirt event
+Brian,Software,Wednesday,9:00,Conference B,scheduled,
+Lawrence,Not an employee,n/a,n/a,n/a,n/a,Lives next door to Peter. Was not on the list
