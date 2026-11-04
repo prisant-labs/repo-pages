@@ -247,7 +247,7 @@ Browser storage is shared by origin. Project sites under one domain share an ori
 
 ## Known gaps
 
-None are open. At XL interface text the option rows still wrap in the default 300px panel, because their labels no longer fit on one line. That is the intended fallback, and no label is clipped.
+None are open. At XL interface text, Start on tab and Row density wrap onto two lines in the default 300px panel, because their labels no longer fit on one. That is the intended fallback, and no label is clipped. Every other option row stays on one line at every size.
 
 ## Deliberately left out
 
