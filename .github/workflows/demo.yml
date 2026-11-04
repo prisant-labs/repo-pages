@@ -1,0 +1,80 @@
+# Tests the generator, builds the Initech demo from this commit's viewer and generator,
+# and runs the browser checks on the result. Pushes to main then publish the page to
+# https://projects.prisantlabs.com/repo-pages/ - the org site owns that domain, and
+# GitHub serves this repository's Pages site under it at /repo-pages/.
+#
+# The published site is public even though this repository is private.
+name: Demo
+
+on:
+  push:
+    branches: [main]
+    paths: &paths
+      - 'viewer/**'
+      - 'generator/**'
+      - 'examples/**'
+      - 'tests/**'
+      - '.github/workflows/demo.yml'
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: demo-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Test the generator
+        run: python generator/test_build_site.py
+
+      - name: Build the demo
+        run: python examples/build_demo.py --viewer viewer --generator generator/build_site.py
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-package-lock playwright@1.64.1
+          npx playwright install --with-deps chromium
+
+      - name: Run the browser checks
+        run: node tests/run_browser_checks.mjs
+
+      - name: Upload the demo
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

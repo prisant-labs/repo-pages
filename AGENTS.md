@@ -25,13 +25,14 @@ npm install --no-save --no-package-lock playwright
 node tests/run_browser_checks.mjs
 ```
 
-Use `python` on Windows if `python3` is not found. Set `RB_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. All three steps must pass before a merge. Read the results rather than assuming them.
+Use `python` on Windows if `python3` is not found. Set `RB_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. All three steps must pass before a merge, and `.github/workflows/demo.yml` repeats them on pull requests. Read the results rather than assuming them.
 
 ## Rules
 
 - **Keep the repository neutral.** Name no company, organization or private repository, other than the fictional Initech sample and third-party projects. This covers code comments, docs, sample data, commit messages, branch names and pull request text.
 - **Search before merging.** If `_local/scrub-terms.txt` exists, search the whole diff with `git grep -IiE -f _local/scrub-terms.txt`. A hit blocks the merge. Never commit that file or quote its terms.
 - **Keep the demo honest.** The demo must come from the current viewer and generator. Do not commit the built page, because its dates change on every build.
+- **Treat the demo as public.** Pushes to `main` publish it to <https://projects.prisantlabs.com/repo-pages/>, although this repository is private. Anything in the viewer or `examples/` becomes readable by anyone.
 - **Keep the viewer dependency-free.** It has no frontend build step and loads nothing from the network. Add third-party code only with a pinned version, a recorded hash and an entry in `THIRD-PARTY-NOTICES.md`.
 - **Respect the registry.** Add a reader setting through `KEYS` and `PREF_SPEC`, so it gets validation and Reset. Validate everything read from browser storage.
 - **Respect the rejected list.** Do not add anything under "Deliberately left out" in `docs/settings-spec.md` without a new decision.

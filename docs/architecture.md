@@ -17,6 +17,7 @@ flowchart LR
     Viewer --> Demo
     Demo --> Page["One self-contained page"]
     Page --> Checks["tests/run_browser_checks.mjs"]
+    Checks --> Live["Published demo, from main only"]
 ```
 
 ## Parts
@@ -31,6 +32,7 @@ flowchart LR
 | Demo build | `examples/build_demo.py` | Replays the history, runs the generator and folds everything into one page |
 | Browser checks | `tests/browser_checks.js` | 48 settings behavior checks that run inside the page |
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
+| Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
 
 ## Two layouts
 
@@ -52,6 +54,19 @@ The generator writes `site-data.json` next to the viewer. It holds the site conf
 4. It writes one HTML file with the libraries, the data file and every published file inlined.
 
 Dates are relative to the build, so the output changes on every run. **Do not commit the built page.** Build it where you need it.
+
+## Continuous integration
+
+`.github/workflows/demo.yml` runs on pull requests and on pushes to `main` that touch `viewer/`, `generator/`, `examples/`, `tests/` or the workflow. It can also be started by hand.
+
+| Job | Runs on | What it does |
+|---|---|---|
+| `build` | Every trigger | Tests the generator, builds the demo, runs the browser checks and uploads the page |
+| `deploy` | `main` only, not pull requests | Publishes the uploaded page to GitHub Pages |
+
+The demo comes from the viewer and generator in the same commit, so it cannot fall behind them. A failed test or check stops the run before anything is published.
+
+**The published site is public, although this repository is private.** Only the built page is published, which is the viewer, the generator's output and the sample content. It is served at <https://projects.prisantlabs.com/repo-pages/>, because the organization's site owns that domain.
 
 ## Settings
 
