@@ -47,6 +47,7 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 - Hash routes in the form `#/p/path`, `#/f/folder` and `#/search?q=`.
 - A one-page demo built from the real viewer and generator.
 - 48 browser checks for settings behavior.
+- A workflow that runs the tests and checks on every relevant change, and publishes the demo from `main`.
 
 ## Not built yet
 

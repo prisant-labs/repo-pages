@@ -19,7 +19,9 @@ It has two parts:
 
 ## Try the demo
 
-The demo runs the real viewer and generator over the [Initech sample](examples/README.md), a parody company intranet. It builds into one page that needs no network.
+**[Open the live demo](https://projects.prisantlabs.com/repo-pages/).** It runs the real viewer and generator over the [Initech sample](examples/README.md), a parody company intranet. Every change to the viewer, generator or sample rebuilds it, so it always shows the latest version.
+
+To build the same page yourself:
 
 ```bash
 python3 examples/build_demo.py --viewer viewer --generator generator/build_site.py
@@ -67,6 +69,8 @@ To publish it, deploy `_site/` to GitHub Pages from a workflow. Check out with `
 **Is the site private?** Not by default. GitHub offers access-controlled Pages only on certain plans, so check GitHub's current rules before you publish anything sensitive.
 
 **Why does the Updated tab show one author for everything?** The site was built from a shallow clone. Build with full history.
+
+**How current is the live demo?** A workflow rebuilds it on every push to `main` that touches the viewer, generator, sample or checks. It publishes only if the tests and browser checks pass.
 
 **Are reader settings shared between readers?** No. They live in each reader's browser storage. If storage is blocked, the defaults apply.
 

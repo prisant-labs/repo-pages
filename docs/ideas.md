@@ -64,7 +64,7 @@ None of these are commitments. Each idea says what it would give a reader and wh
 | **Sample repo and one-file demo** (built) | Develop the viewer, show it, and share screenshots using only sample content | [examples/](../examples/README.md) |
 | **Smoke test on the demo** | A viewer change that breaks a view fails before it ships | A Playwright script that opens each file type in the demo and checks for content and no console errors. [tests/run_browser_checks.mjs](../tests/run_browser_checks.mjs) checks settings behavior on one file so far |
 | **Generator tests on the sample** | The rename, delete and backdated history are tested on a real repo, not a three-file fixture | Point `test_build_site.py` at a replay of `initech-history.json` |
-| **Demo built in CI** | Every viewer pull request carries a clickable demo | Run `build_demo.py` in the workflow and upload the HTML as an artifact |
+| **Demo built in CI** (built) | Every push to `main` publishes the current demo, and every pull request tests it | [.github/workflows/demo.yml](../.github/workflows/demo.yml) |
 | **Demo mode in the viewer** | No build-time swaps; the demo needs no anchors | The viewer reads an embedded data object when one is present. Costs a few lines in the real viewer |
 
 ## Running many sites
