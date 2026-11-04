@@ -41,7 +41,7 @@ Defaults are in bold. Every key uses the `rb.` prefix.
 | Tree | Wrap long names | Toggle | On, **Off** | `rb.tree.wrapNames` |
 | Tree | Reveal the open file | Toggle | **On**, Off | `rb.tree.reveal` |
 | Lists | Start on tab | 5 options | **Folders**, New, Updated, Authors, History | `rb.nav.defaultTab` |
-| Lists | New and Updated show | 4 options | **Latest**, 7 days, 30 days, 90 days | `rb.nav.recentDays` |
+| Lists | New and Updated show | 4 options | **Latest**, 7d, 30d, 90d | `rb.nav.recentDays` |
 | Documents | Text | Stepper | 80, 90, **100**, 110, 120, 135, 150% | `rb.md.textScale` |
 | Documents | Width | 3 options | Narrow, **Normal**, Full | `rb.md.width` |
 | Documents | Doc theme | 3 options | **Match**, Light, Dark | `rb.md.theme` |
@@ -92,8 +92,8 @@ Reset does not switch the active tab. Start on tab takes effect on the next page
 
 One multiplier, `--ui-scale`, applies to the fixed font sizes of the interface. [design.md](design.md#type-scale) lists each element and its base size.
 
-- **Included:** the panel header, chips, tabs, toolbar and footer; the settings popover; the two header rows, breadcrumbs and buttons; dropdown menus; the file info popover; the doc footer; the search palette's input and footer; and the toast.
-- **Not included:** document content, code, CSV and JSON views, the home, folder and search pages, and the "On this page" outline.
+- **Included:** the panel header, chips, tabs, toolbar and footer; the settings popover; the two header rows, breadcrumbs and buttons; dropdown menus; the file info popover; the doc footer; the whole search palette, including its result rows and headings; type badges in the header row, menus and palette; and the toast.
+- **Not included:** document content, code, CSV and JSON views, the home, folder and search pages with their type badges, and the "On this page" outline.
 - **Not changed:** icon buttons, header row heights and other pixel-sized controls keep their size.
 
 Do not change the root font size to do this. Document styles use `rem` as well, so that would scale the content too.
@@ -106,22 +106,24 @@ One multiplier, `--tree-scale`, applies to everything inside the sidebar's scrol
 
 The chevron and folder icon grow with it. So does the guide line's position, which keeps the line under the chevron at every size. See [Tree geometry](design.md#tree-geometry).
 
-The same classes outside the sidebar keep their own sizes, because the multiplier is scoped to the sidebar's list.
+Tree text has no effect outside the sidebar's list, because the multiplier is scoped to that list. The same classes follow Interface text in menus and the palette, and keep fixed sizes on pages.
 
 ### Folder indentation
 
-Two values drive the tree: the indent per nesting level and the x-position of the vertical guide line. The guide line sits at the folder row's left padding plus half the chevron width, so it runs under the chevron. The chevron is 13px wide at 100% tree text and grows with Tree text.
+The indent per nesting level drives the tree. The vertical guide line sits at the folder row's left padding plus half the chevron width, so it runs under the chevron in every indent mode and at every Tree text size. The chevron is 13px wide at 100% tree text and grows with Tree text.
 
-| Option | Indent per level | Guide-line x |
-|---|---|---|
-| Compact | `1.0rem` | `calc(0.65rem + 6.5px × tree scale)` |
-| Default | `1.55rem` | `calc(0.85rem + 6.5px × tree scale)` |
-| Custom | The entered value, in `rem` | `min(value × 0.77, 1.2)` rem, not scaled |
+| Option | Indent per level |
+|---|---|
+| Compact | `1.0rem` |
+| Default | `1.55rem` |
+| Custom | The entered value, in `rem` |
+
+A row's left padding is `0.85rem`, unless the indent is too small to hold it. Then the padding shrinks so that the chevron's center lands on the indent. [design.md](design.md#tree-geometry) has the formula.
 
 - A custom entry that is not a number, or that is outside 0.5 to 4.0, is ignored while typing. A valid entry is rounded to two decimals.
-- The values are applied as two CSS custom properties on the root (`--tree-indent` and `--tree-line-x`), so the tree CSS never reads JavaScript state.
+- The value is applied as one CSS custom property on the root, `--tree-indent`. The CSS derives `--tree-row-px` and `--tree-line-x` from it, so the tree CSS never reads JavaScript state.
 - With guide lines off, the left border of every nested list becomes transparent, and the layout does not shift.
-- The left padding of a nested list is clamped at zero. At large tree text, the Compact indent can be smaller than the guide-line position. The clamp stops that from producing an invalid value, and the effective indent becomes the guide-line position.
+- Each level starts exactly one indent to the right of its parent, plus the guide line's 1px border. The one exception is Custom at its 0.5rem minimum with XL tree text, where half the chevron is a fraction of a pixel wider than the indent.
 
 ### Row density
 
@@ -133,7 +135,8 @@ Row density sets the vertical padding of tree rows: Compact `0.1rem`, Default `0
 - **Recently updated** puts the file with the newest last commit first. Files with the same date fall back to name order. A folder sorts by the newest file anywhere beneath it.
 - Folders stay above files at every level, in both modes.
 - The Previous and Next arrows, the "2 / 6" counter and the jump list follow the same order, so stepping through files matches the tree.
-- Breadcrumb menus and folder pages stay in name order. See [Known gaps](#known-gaps).
+- Breadcrumb menus and folder pages follow the same order, using the same comparison. Changing Sort redraws an open folder page and the file counter at once.
+- The home page's folder cards stay in name order, because they are a directory rather than a tree.
 
 ### Vertical guide lines
 
@@ -146,6 +149,7 @@ Every second visible row gets a stripe, counted from the top of the list after e
 - **Counted rows:** tree folders, tree files and the file rows in the New, Updated, Authors and History lists. Commit headers and author headers are not counted.
 - **Nesting:** counting runs across all levels, so `:nth-child` cannot do this. The viewer renders no children for a closed folder, so every rendered row is visible.
 - **Open and close:** the count reruns on every render, so stripes stay even as folders open and close.
+- **Groups:** each commit or author header restarts the count, so every group in the lists opens on the same shade.
 - **Full row:** the stripe runs the full width of the panel, under the indent and under the guide lines.
 - **From indent:** the stripe starts where the row starts.
 - **Priority:** a stripe is a separate layer behind its row, in both spans. Hover and the selected color add to the stripe and never replace it, so both stay visible at every strength and in both themes.
@@ -181,7 +185,7 @@ The tab that is active when the site loads. Choosing an option does not switch t
 ### New and Updated show
 
 - **Latest** shows the newest 40 commits that have a matching file.
-- **7, 30 or 90 days** shows every matching commit in that window, with no 40-commit limit. A commit outside the window is skipped, and the search carries on. Author dates are not always in order, so a rebased commit with an old date must not hide newer commits below it.
+- **7d, 30d or 90d** shows every matching commit in that window, with no 40-commit limit. A commit outside the window is skipped, and the search carries on. Author dates are not always in order, so a rebased commit with an old date must not hide newer commits below it.
 - The empty message for a date window reads "Nothing in the last N days for this filter." Latest keeps "Nothing here for this filter."
 - Authors and History are not affected.
 
@@ -243,17 +247,7 @@ Browser storage is shared by origin. Project sites under one domain share an ori
 
 ## Known gaps
 
-The viewer has these gaps. None of them stops a feature working.
-
-| Gap | What happens | Recommended fix |
-|---|---|---|
-| **Search palette rows do not scale** | At XL the palette input measures 20.7px and its footer 13.8px, but result names stay at 13.6px and the group heading at 12.1px | Scale `.recent-name`, `.recent-path` and `.group-head` inside the palette by `--ui-scale` |
-| **Type badges outside the sidebar do not scale** | At XL the header row's badge stays at 9.2px beside an 18.9px file name. Menu and palette badges behave the same way | Scale `.tbadge` in interface areas by `--ui-scale`, and leave page content alone |
-| **Custom indentation does not track the chevron** | The guide line sits 0.6px off at S, on center at M and 1.7px off at XL, with the custom value at 2.0 | Base the custom guide-line position on half the scaled chevron, as Compact and Default do |
-| **Compact guide line sits left of the chevron** | The line is 3.7px left of the chevron's center, at every tree size. Its offset uses `0.65rem` while the row padding is `0.85rem` | Decide whether to keep it. Moving the line to center makes the guide-line position larger than the `1.0rem` indent, so the Compact indent would need to grow |
-| **Sort does not reach menus or folder pages** | Breadcrumb menus and folder pages stay in name order under Recently updated | Decide whether they should follow. Using one shared comparison function makes this one change |
-| **Two option rows wrap at default text size** | In the default 300px panel, Start on tab wraps to 3 and 2 buttons. New and Updated show wraps to 3 and 1, which leaves "90 days" alone at full width. See [screenshot 04](screenshots/04-popover-lists-documents.png) | Use shorter labels such as "7d", "30d" and "90d", or tighter button padding for these two rows |
-| **Stripes continue across list groups** | In New and Updated, the stripe count carries across commit headers, so a group can start on either shade | Leave it, or restart the count at each header |
+None are open. At XL interface text the option rows still wrap in the default 300px panel, because their labels no longer fit on one line. That is the intended fallback, and no label is clipped.
 
 ## Deliberately left out
 

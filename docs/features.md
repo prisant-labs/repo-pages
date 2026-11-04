@@ -46,7 +46,7 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 - A generator with its own tests, and a rename map that makes links in docs and old `#/p/` links follow renames.
 - Hash routes in the form `#/p/path`, `#/f/folder` and `#/search?q=`.
 - A one-page demo built from the real viewer and generator.
-- 48 browser checks for settings behavior.
+- 64 browser checks for settings behavior.
 - A workflow that runs the tests and checks on every relevant change, and publishes the demo from `main`.
 
 ## Not built yet
@@ -60,7 +60,7 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 - An automated hash test for the vendored libraries. The hashes are recorded in [viewer/vendor/README.md](../viewer/vendor/README.md).
 - Browser checks beyond settings behavior, such as one per file type.
 
-[settings-spec.md](settings-spec.md#known-gaps) lists the known gaps in what is built. [ideas.md](ideas.md) lists other features worth considering.
+[settings-spec.md](settings-spec.md#known-gaps) records any known gaps in what is built. [ideas.md](ideas.md) lists other features worth considering.
 
 ## Design rules
 

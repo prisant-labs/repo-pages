@@ -34,16 +34,21 @@ window.rbChecks = async function rbChecks() {
 
     // Tree geometry at every size, icons on and off
     let geoBad = [], geoSeen = false;
-    for (const treeScale of TEXT_SIZES) for (const folderIcons of [false, true]) {
-      setPrefs({ treeScale, folderIcons });
+    const rootPx = px(document.documentElement);
+    for (const [indent, indentCustom, rem] of [["default", 2, 1.55], ["compact", 2, 1], ["custom", 0.5, 0.5], ["custom", 2, 2], ["custom", 4, 4]]) for (const treeScale of TEXT_SIZES) for (const folderIcons of [false, true]) {
+      setPrefs({ indent, indentCustom, treeScale, folderIcons });
       const lists = qa("#navView .tree-children:not(.closed)").filter(k => k.previousElementSibling);
       const list = lists[0], chev = list && list.previousElementSibling.querySelector(".chev").getBoundingClientRect();
-      if (list) { const d = list.getBoundingClientRect().left - (chev.left + chev.width / 2); if (Math.abs(d) > 0.6) geoBad.push(`line ${treeScale}/${folderIcons} ${d.toFixed(1)}px`); }
+      if (list) { const d = list.getBoundingClientRect().left - (chev.left + chev.width / 2); if (Math.abs(d) > 0.6) geoBad.push(`line ${indent}/${indentCustom}/${treeScale}/${folderIcons} ${d.toFixed(1)}px`); }
+      if (list) { // one level down starts one indent to the right, plus the guide line's 1px border
+        const row = list.querySelector(":scope > .tree-folder, :scope > .tree-file"), step = row.getBoundingClientRect().left - list.previousElementSibling.getBoundingClientRect().left;
+        if (Math.abs(step - (rem * rootPx + 1)) > 1.5) geoBad.push(`indent ${indent}/${indentCustom}/${treeScale} ${step.toFixed(1)}px`);
+      }
       const mixed = lists.find(k => k.querySelector(":scope > .tree-file") && k.querySelector(":scope > .tree-folder"));
       if (mixed) { geoSeen = true; const d = mixed.querySelector(":scope > .tree-file .tbadge").getBoundingClientRect().left - mixed.querySelector(":scope > .tree-folder .tree-name").getBoundingClientRect().left; if (Math.abs(d) > 0.6) geoBad.push(`badge ${treeScale}/${folderIcons} ${d.toFixed(1)}px`); }
     }
     check("tree geometry", !geoBad.length, geoBad.slice(0, 3).join("; ")); if (!geoSeen) skip("badge alignment: no folder holds both files and folders");
-    setPrefs({ treeScale: 1, folderIcons: false });
+    setPrefs({ indent: "default", indentCustom: 2, treeScale: 1, folderIcons: false });
 
     // Text scales stay in their own areas
     const crumb = q(".breadcrumb"), file = q("#navView .tree-file"), body = q(".md-body");
@@ -59,6 +64,24 @@ window.rbChecks = async function rbChecks() {
     check("tree text leaves header alone", Math.abs(px(crumb) - base.crumb) < 0.01);
     setPrefs({ treeScale: 1 });
 
+    // Interface text reaches the palette and the badges in the header and menus, but not page content
+    const contentBadge = document.createElement("div"); contentBadge.innerHTML = tbadge(FILES[0]); document.body.appendChild(contentBadge);
+    const interfaceSizes = () => {
+      openPalette("");
+      const sizes = { "palette name": px(q(".palette .recent-name")), "palette path": px(q(".palette .recent-path")), "palette heading": px(q(".palette .group-head")), "palette badge": px(q(".palette .tbadge")) };
+      closePalette();
+      const headerBadge = q("#headerRow2 .tbadge"); if (headerBadge) sizes["header badge"] = px(headerBadge);
+      openMenu(q(".crumb"), folderMenu("")); const menuBadge = q(".menu .tbadge"); if (menuBadge) sizes["menu badge"] = px(menuBadge); closeMenu();
+      return sizes;
+    };
+    const smallSizes = interfaceSizes(), contentSize = px(contentBadge.firstChild);
+    setPrefs({ uiScale: 1.25 });
+    const largeSizes = interfaceSizes();
+    Object.keys(smallSizes).forEach(name => check(`interface text scales ${name}`, Math.abs(largeSizes[name] / smallSizes[name] - 1.25) < 0.02, `${smallSizes[name]} to ${largeSizes[name]}`));
+    check("interface text leaves page badges alone", Math.abs(px(contentBadge.firstChild) - contentSize) < 0.01);
+    if (!("header badge" in smallSizes && "menu badge" in smallSizes)) skip("interface badges: the header or menu showed no badge");
+    contentBadge.remove(); setPrefs({ uiScale: 1 });
+
     // Stripes, in both spans and strengths
     for (const zebraSpan of ["full", "indent"]) for (const zebraStrength of ["subtle", "medium"]) {
       setPrefs({ zebra: true, zebraSpan, zebraStrength });
@@ -72,6 +95,16 @@ window.rbChecks = async function rbChecks() {
     }
     const act = q("#navView .tree-file.active");
     if (act) check("selected row keeps its color on stripes", getComputedStyle(act).backgroundColor !== "rgba(0, 0, 0, 0)"); else skip("selected row: open a file in the tree");
+    const groupsRestart = headClass => {
+      const heads = qa(`#navView ${headClass}`);
+      return { count: heads.length, ok: heads.every(h => { let i = 0, ok = true; for (let r = h.nextElementSibling; r && r.classList.contains("recent-item"); r = r.nextElementSibling) if (r.classList.contains("z-odd") !== (i++ % 2 === 1)) ok = false; return ok; }) };
+    };
+    for (const [view, headClass] of [["updated", ".commit-head"], ["authors", ".group-head"]]) {
+      state.view = view; renderSidebar();
+      const groups = groupsRestart(headClass);
+      if (groups.count > 1) check(`stripes restart at each group in ${view}`, groups.ok); else skip(`stripe groups: ${view} has one group`);
+    }
+    state.view = "folders"; renderSidebar();
     setPrefs({ zebra: false });
 
     // Folder icons
@@ -104,6 +137,30 @@ window.rbChecks = async function rbChecks() {
       PREFS.sort = "name"; const names = siblings(dir[0]).map(f => f.name);
       check("name sort", names.every((n, i) => !i || names[i - 1].localeCompare(n) <= 0));
     } else skip("sort: no folder with different file dates");
+    const newestFirst = list => list.every((t, i) => !i || list[i - 1] >= t);
+    const subDir = Object.values(FILES.reduce((m, f) => ((m[f.dir] = m[f.dir] || []).push(f), m), {})).find(l => l[0].dir && new Set(l.map(fileTime)).size > 1);
+    if (subDir) {
+      const path = subDir[0].dir, box = document.createElement("div");
+      const timesIn = html => { box.innerHTML = html; return [...box.querySelectorAll("[data-file]")].map(el => fileTime(BY_PATH[el.dataset.file])); };
+      PREFS.sort = "updated";
+      check("breadcrumb menu follows Recently updated", newestFirst(timesIn(folderMenu(path))));
+      check("folder page follows Recently updated", newestFirst(timesIn(renderFolder(path))));
+      box.innerHTML = folderMenu("");
+      check("breadcrumb menu sorts folders by newest file", newestFirst([...box.querySelectorAll("[data-folder]")].map(el => newestUnder(el.dataset.folder))));
+      PREFS.sort = "name";
+      box.innerHTML = folderMenu(path);
+      const menuNames = [...box.querySelectorAll("[data-file] .tree-name")].map(el => el.textContent);
+      check("breadcrumb menu follows Name", menuNames.every((n, i) => !i || menuNames[i - 1].localeCompare(n) <= 0));
+
+      // Changing Sort redraws a folder page that is already open
+      location.hash = "#/f/" + path; await wait(250);
+      q("#settingsBtn").click(); await wait(100);
+      q('#settingsBody [data-pref="sort"][data-val="updated"]').click(); await wait(100);
+      const onPage = qa("table.files tr[data-file]").map(el => fileTime(BY_PATH[el.dataset.file]));
+      check("an open folder page re-sorts", onPage.length > 1 && newestFirst(onPage));
+      q('#settingsBody [data-pref="sort"][data-val="name"]').click(); closeSettings();
+      location.hash = savedHash || "#/"; await wait(250);
+    } else skip("sort reach: no nested folder with different file dates");
 
     // Date windows must skip an old commit, not stop at it
     const listed = (view, days) => { state.view = view; PREFS.recentDays = days; renderSidebar(); return qa("#navView .recent-item").map(r => r.dataset.file).sort().join(); };
@@ -128,6 +185,9 @@ window.rbChecks = async function rbChecks() {
     check("popover stays inside the panel", modal.top >= panel.top && modal.bottom <= panel.bottom);
     check("popover has four sections", qa("#settingsBody .settings-modal-section").map(s => s.textContent).join() === "Appearance,Tree,Lists,Documents");
     check("focus on the selected option", document.activeElement.classList.contains("selected"));
+    const oneLine = k => new Set(qa(`#settingsBody [data-pref="${k}"]`).map(b => b.offsetTop)).size === 1;
+    check("Start on tab stays on one line", oneLine("defaultTab"));
+    check("New and Updated show stays on one line", oneLine("recentDays"));
     check("sub-options hidden while toggles are off", !q('#settingsBody [data-pref="zebraSpan"]') && !q('#settingsBody [data-pref="iconStyle"]'));
     q('#settingsBody [data-toggle="zebra"]').click();
     check("sub-options shown when on", !!q('#settingsBody [data-pref="zebraSpan"]'));

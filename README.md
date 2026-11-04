@@ -79,7 +79,7 @@ To publish it, deploy `_site/` to GitHub Pages from a workflow. Check out with `
 | Document | Read it to learn |
 |---|---|
 | [docs/features.md](docs/features.md) | What the viewer does today, and what is not built |
-| [docs/settings-spec.md](docs/settings-spec.md) | Every reader setting, its values, default and storage key, plus known gaps |
+| [docs/settings-spec.md](docs/settings-spec.md) | Every reader setting, its values, default and storage key |
 | [docs/design.md](docs/design.md) | Layout values, colors, tree geometry and screenshots |
 | [docs/architecture.md](docs/architecture.md) | How the viewer, generator, demo and checks fit together |
 | [docs/ideas.md](docs/ideas.md) | Features worth considering |
