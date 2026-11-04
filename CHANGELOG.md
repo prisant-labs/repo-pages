@@ -16,6 +16,7 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ### Changed
 
+- **One name everywhere.** The default page title is now "Repo Pages", and docs, sample content and tags say repo-pages instead of "repo browser". Storage keys moved from the `rb.` prefix to `rp.`, so settings saved in a browser reset once.
 - **Sort reaches menus and folder pages.** Under Recently updated, breadcrumb menus and folder pages now use the tree's order. An open folder page re-sorts as soon as the setting changes.
 - **Date options have shorter labels.** New and Updated show now offers 7d, 30d and 90d, so the row stays on one line. Tooltips spell out each window.
 

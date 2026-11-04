@@ -1,6 +1,6 @@
 ---
 description: Visual design for the viewer's sidebar display settings - screenshots, popover contents and copy, tree geometry formulas, stripe and icon details, color tokens and the full type scale.
-tags: [repo-browser, design, sidebar, settings-popover, tree-geometry, tokens, type-scale, folder-icons, alternating-rows, screenshots]
+tags: [repo-pages, design, sidebar, settings-popover, tree-geometry, tokens, type-scale, folder-icons, alternating-rows, screenshots]
 ---
 
 # Sidebar display settings: design

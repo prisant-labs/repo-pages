@@ -1,11 +1,11 @@
 ---
-description: The Initech sample repo, its commit script, and the script that builds the self-contained repo browser demo from them.
+description: The Initech sample repo, its commit script, and the script that builds the self-contained repo-pages demo from them.
 tags: [examples, sample-data, demo, fixture, initech]
 ---
 
 # Examples
 
-A sample repo for building, testing and showing the repo browser.
+A sample repo for building, testing and showing repo-pages.
 
 | Path | What it is |
 |---|---|

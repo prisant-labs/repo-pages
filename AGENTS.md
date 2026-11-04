@@ -4,7 +4,7 @@ Instructions for any AI agent working in this repository. `CLAUDE.md` is a thin 
 
 ## Project map
 
-repo-pages turns a git repository into a static website where every file is readable. [docs/architecture.md](docs/architecture.md) explains how the parts fit together.
+repo-pages turns a git repository into a static website where every file is readable. [docs/architecture.md](docs/architecture.md) explains how the parts fit together. Write the name as `repo-pages` in prose and code, and as "Repo Pages" in page titles and on the projects hub. Storage keys use the `rp.` prefix.
 
 | Path | What it is |
 |---|---|
@@ -25,7 +25,7 @@ npm install --no-save --no-package-lock playwright
 node tests/run_browser_checks.mjs
 ```
 
-Use `python` on Windows if `python3` is not found. Set `RB_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. All three steps must pass before a merge, and `.github/workflows/demo.yml` repeats them on pull requests. Read the results rather than assuming them.
+Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. All three steps must pass before a merge, and `.github/workflows/demo.yml` repeats them on pull requests. Read the results rather than assuming them.
 
 ## Rules
 
