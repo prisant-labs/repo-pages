@@ -36,7 +36,7 @@ Use `python` on Windows if `python3` is not found. Set `RB_BROWSER_CHANNEL=msedg
 - **Keep the viewer dependency-free.** It has no frontend build step and loads nothing from the network. Add third-party code only with a pinned version, a recorded hash and an entry in `THIRD-PARTY-NOTICES.md`. Keep the Lucide notice comment at the top of `viewer/index.html`, because built pages must carry it.
 - **Respect the registry.** Add a reader setting through `KEYS` and `PREF_SPEC`, so it gets validation and Reset. Validate everything read from browser storage.
 - **Respect the rejected list.** Do not add anything under "Deliberately left out" in `docs/settings-spec.md` without a new decision.
-- **Check geometry.** After changing tree CSS, confirm the default guide line still passes through the chevron center at every Tree text size. `docs/design.md` has the formulas.
+- **Check geometry.** The guide line must pass through the chevron center in every indent mode at every Tree text size, and the browser checks test this. `docs/design.md` has the formulas, so keep them in step with the tree CSS.
 
 ## Docs to change with the code
 

@@ -41,8 +41,9 @@
     --content-max-width: 1100px;
     --md-max-width: 1600px; /* Markdown width at Normal; Narrow and Full are in the doc footer */
     --md-text-scale: 1; /* Markdown text size; the doc footer's A- and A+ set it */
-    --tree-indent: 1.55rem; /* Tree nesting per level; the Settings modal sets it. Must be >= --tree-line-x */
-    --tree-line-x: calc(0.85rem + 6.5px); /* Guide-line x: folder row padding + half the 13px chevron */
+    --tree-indent: 1.55rem; /* Tree nesting per level; the Settings modal sets it */
+    --tree-row-px: max(0px, min(0.85rem, var(--tree-indent) - 6.5px * var(--tree-scale))); /* Row left padding: shrinks so a narrow indent still holds the chevron's center */
+    --tree-line-x: calc(var(--tree-row-px) + 6.5px * var(--tree-scale)); /* Guide-line x: row padding + half the scaled chevron, in every indent mode */
     --ui-scale: 1; /* Interface text size (panels, header, menus, doc footer); the Settings modal sets it */
     --tree-scale: 1; /* Sidebar tree and list text size; the Settings modal sets it */
     --tree-row-py: 0.22rem; /* Tree row padding; Settings > Row density sets it */
@@ -171,9 +172,9 @@
      Files start where folder names start: row padding + chevron + gap, plus the folder icon when icons are on. */
   .nav-panel { --tree-chev: calc(13px * var(--tree-scale)); --tree-icon-w: 0px; }
   .nav-panel.folder-icons { --tree-icon-w: calc(15px * var(--tree-scale) + 0.35rem); }
-  .tree-folder, .tree-file { position: relative; display: flex; align-items: center; padding: var(--tree-row-py) 0.85rem; cursor: pointer; border-radius: 4px; user-select: none; white-space: nowrap; }
+  .tree-folder, .tree-file { position: relative; display: flex; align-items: center; padding: var(--tree-row-py) 0.85rem var(--tree-row-py) var(--tree-row-px); cursor: pointer; border-radius: 4px; user-select: none; white-space: nowrap; }
   .tree-folder { font-size: calc(0.78rem * var(--tree-scale)); font-weight: 600; }
-  .tree-file { font-size: calc(0.74rem * var(--tree-scale)); color: var(--text); gap: 0.35rem; padding-left: calc(0.85rem + var(--tree-chev) + 0.3rem + var(--tree-icon-w)); }
+  .tree-file { font-size: calc(0.74rem * var(--tree-scale)); color: var(--text); gap: 0.35rem; padding-left: calc(var(--tree-row-px) + var(--tree-chev) + 0.3rem + var(--tree-icon-w)); }
   .wrap-names .tree-folder, .wrap-names .tree-file { white-space: normal; }
   .wrap-names .tree-name { overflow-wrap: anywhere; min-width: 7em; } /* deep rows keep a readable column and scroll sideways, as unwrapped rows do */
   /* Alternating rows: renderSidebar marks every other visible row .z-odd. The stripe is its own layer behind the row,
@@ -232,6 +233,12 @@
   .nav-view .act { font-size: calc(0.52rem * var(--tree-scale)); }
   .nav-view .empty-note { font-size: calc(0.72rem * var(--tree-scale)); }
 
+  /* Interface areas follow Settings > Interface text. Badges on home, folder and search pages are page content and keep their size */
+  #headerRow2 .tbadge, .menu .tbadge, .palette .tbadge { font-size: calc(0.5rem * var(--ui-scale)); }
+  .palette .group-head { font-size: calc(0.66rem * var(--ui-scale)); }
+  .palette .recent-name { font-size: calc(0.74rem * var(--ui-scale)); }
+  .palette .recent-path { font-size: calc(0.6rem * var(--ui-scale)); }
+
   /* Settings modal (opened by the gear in the nav footer) */
   .settings-backdrop { position: absolute; inset: 0; z-index: 100; display: none; }
   .settings-backdrop.open { display: block; }
@@ -256,6 +263,8 @@
   /* Equal-width options that wrap onto a second line when larger interface text no longer fits them */
   .indent-track { display: flex; flex-wrap: wrap; gap: 0.25rem; }
   .indent-opt { flex: 1 0 0; min-width: max-content; white-space: nowrap; padding: 0.3rem 0.4rem; border: 1px solid var(--nav-border); border-radius: 5px; background: var(--surface); font-size: calc(0.62rem * var(--ui-scale)); font-weight: 600; color: var(--text-muted); cursor: pointer; text-align: center; }
+  .indent-track.tight { gap: 0.15rem; }
+  .indent-track.tight .indent-opt { flex: 1 1 auto; padding-left: 0; padding-right: 0; } /* five labels share the row; each button gets its label width plus an even share of what is left */
   .indent-opt:hover { background: var(--hover); border-color: var(--text-muted); }
   .indent-opt.selected { background: var(--hover-accent); border-color: var(--accent); color: var(--accent); }
   .custom-indent-row { display: flex; align-items: center; justify-content: space-between; padding: 0.28rem 0.5rem; background: var(--hover); border: 1px solid var(--nav-border); border-radius: 5px; }
@@ -904,6 +913,9 @@ const fileTime = f => Date.parse(f.last.date) || 0;
 const fileCmp = (a, b) => (PREFS.sort === "updated" && fileTime(b) - fileTime(a)) || a.name.localeCompare(b.name);
 // The files in the same folder, in tree order: what the arrows and the "2 / 6" counter step through.
 const siblings = f => FILES.filter(x => x.dir === f.dir).sort(fileCmp);
+// The same order for folder names, given a way to read a folder's newest file time.
+const folderCmp = newest => (a, b) => (PREFS.sort === "updated" && newest(b) - newest(a)) || a.localeCompare(b);
+const newestUnder = path => FILES.reduce((max, f) => f.path.startsWith(path + "/") ? Math.max(max, fileTime(f)) : max, 0);
 
 /* ───────────── Sidebar ───────────── */
 function buildTree(files) {
@@ -923,8 +935,7 @@ function newestIn(node) {
 }
 function renderTreeNode(node, forceOpen) {
   let h = "";
-  const dirCmp = (a, b) => (PREFS.sort === "updated" && newestIn(node.dirs[b]) - newestIn(node.dirs[a])) || a.localeCompare(b);
-  Object.keys(node.dirs).sort(dirCmp).forEach(name => {
+  Object.keys(node.dirs).sort(folderCmp(name => newestIn(node.dirs[name]))).forEach(name => {
     const d = node.dirs[name], open = forceOpen || state.open.has(d.path);
     const active = state.route && state.route.kind === "f" && state.route.path === d.path;
     h += `<div class="tree-folder ${open ? "open" : ""} ${active ? "active" : ""}" data-folder="${esc(d.path)}" tabindex="0" role="button" aria-expanded="${open}">${CHEV}${PREFS.folderIcons ? folderIcons() : ""}<span class="tree-name">${esc(name)}</span><span class="count-badge">${countFiles(d)}</span></div>`;
@@ -975,8 +986,15 @@ function renderSidebar() {
     h = hist.length ? `<div class="group-head">Recently opened in this browser</div>` + hist.map(p => recentItem(BY_PATH[p])).join("") + `<div class="empty-note"><button class="tree-action" id="clearHistory">Clear history</button></div>` : `<div class="empty-note">Files you open appear here. The list stays in this browser.</div>`;
   }
   $("#navView").innerHTML = h;
-  // Alternating rows count visible rows only (closed folders render no children), across all nesting levels
-  if (PREFS.zebra) $("#navView").querySelectorAll(".tree-folder, .tree-file, .recent-item").forEach((r, i) => { if (i % 2) r.classList.add("z-odd"); });
+  // Alternating rows count visible rows only (closed folders render no children), across all nesting levels.
+  // Each commit or author group restarts the count, so every group opens on the same shade.
+  if (PREFS.zebra) {
+    let n = 0;
+    $("#navView").querySelectorAll(".tree-folder, .tree-file, .recent-item, .commit-head, .group-head").forEach(r => {
+      if (r.matches(".commit-head, .group-head")) n = 0;
+      else if (n++ % 2) r.classList.add("z-odd");
+    });
+  }
   const ch = $("#clearHistory"); if (ch) ch.onclick = () => { save(KEYS.history, []); renderSidebar(); };
 }
 
@@ -1021,11 +1039,11 @@ function folderMenu(prefix) {
   let h = prefix ? item("", `data-folder="${esc(prefix)}"`, `${FOLDER_SVG}<span class="tree-name">Open the folder page</span>`)
     : `<a class="menu-item" href="#/" tabindex="-1" role="menuitem" style="color:inherit;text-decoration:none"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span class="tree-name">Home</span></a>`;
   h += `<div class="menu-sep"></div>`;
-  h += Object.keys(dirs).sort((a, b) => a.localeCompare(b)).map(d => {
+  h += Object.keys(dirs).sort(folderCmp(d => newestUnder(within + d))).map(d => {
     const p = within + d;
     return item(cur === p || cur.startsWith(p + "/") ? "current" : "", `data-folder="${esc(p)}"`, `${FOLDER_SVG}<span class="tree-name">${esc(d)}</span><span class="count-badge">${dirs[d]}</span>`);
   }).join("");
-  h += files.sort((a, b) => a.name.localeCompare(b.name)).map(f => item(f.path === cur ? "current" : "", `data-file="${esc(f.path)}"`, `${tbadge(f)}<span class="tree-name">${esc(f.name)}</span>`)).join("");
+  h += files.sort(fileCmp).map(f => item(f.path === cur ? "current" : "", `data-file="${esc(f.path)}"`, `${tbadge(f)}<span class="tree-name">${esc(f.name)}</span>`)).join("");
   return h;
 }
 function jumpMenu(f) {
@@ -1121,7 +1139,7 @@ function renderHome() {
 }
 function renderFolder(path) {
   const inDir = FILES.filter(f => f.dir === path);
-  const subdirs = [...new Set(FILES.filter(f => f.path.startsWith(path + "/") && f.dir !== path).map(f => f.path.slice(path.length + 1).split("/")[0]))].sort((a, b) => a.localeCompare(b));
+  const subdirs = [...new Set(FILES.filter(f => f.path.startsWith(path + "/") && f.dir !== path).map(f => f.path.slice(path.length + 1).split("/")[0]))].sort(folderCmp(d => newestUnder(path + "/" + d)));
   const readme = inDir.find(f => /^readme\.md$/i.test(f.name));
   let h = `<div class="page">`;
   if (readme) h += `<div class="readme-card"><div class="readme-head">${tbadge(readme)} ${esc(readme.name)}</div><div class="md-body" id="readmeSlot"><div class="loading">Loading...</div></div></div>`;
@@ -1130,7 +1148,7 @@ function renderFolder(path) {
     const p = path + "/" + d, all = FILES.filter(f => f.path.startsWith(p + "/")), latest = all.sort((a, b) => b.last.date.localeCompare(a.last.date))[0];
     h += `<tr class="row" data-folder="${esc(p)}" tabindex="0"><td><div class="namecell">${FOLDER_SVG}<b>${esc(d)}</b></div></td><td class="muted hide-sm">${esc(latest.last.msg)}</td><td class="num muted">${all.length} files</td><td class="num muted">${ago(latest.last.date)}</td></tr>`;
   });
-  inDir.sort((a, b) => a.name.localeCompare(b.name)).forEach(f => {
+  inDir.sort(fileCmp).forEach(f => {
     h += `<tr class="row" data-file="${esc(f.path)}" tabindex="0"><td><div class="namecell">${tbadge(f)}${esc(f.name)}</div></td><td class="muted hide-sm">${esc(f.last.msg)}</td><td class="num muted">${fmtBytes(f.bytes)}</td><td class="num muted">${ago(f.last.date)}</td></tr>`;
   });
   if (!subdirs.length && !inDir.length) h += `<tr><td colspan="4" class="muted">No published files in this folder.</td></tr>`;
@@ -1333,10 +1351,7 @@ function trackToc(body) {
 })();
 
 /* ───────────── Settings modal (the gear in the nav footer) ───────────── */
-const INDENT_LEVELS = { // the guide line sits under the chevron's centre, which grows with Tree text
-  compact: { indent: "1.0rem", lineX: "calc(0.65rem + 6.5px * var(--tree-scale))" },
-  default: { indent: "1.55rem", lineX: "calc(0.85rem + 6.5px * var(--tree-scale))" }
-};
+const INDENT_LEVELS = { compact: "1.0rem", default: "1.55rem" }; // the CSS derives the guide line from the indent
 const ROW_PADDING = { compact: "0.1rem", default: "0.22rem", comfortable: "0.36rem" };
 function applyTheme() {
   if (PREFS.theme === "system") document.documentElement.removeAttribute("data-theme");
@@ -1349,13 +1364,7 @@ function applyPrefs() {
   root.style.setProperty("--ui-scale", PREFS.uiScale);
   root.style.setProperty("--tree-scale", PREFS.treeScale);
   root.style.setProperty("--tree-row-py", ROW_PADDING[PREFS.density]);
-  if (PREFS.indent === "custom") {
-    root.style.setProperty("--tree-indent", PREFS.indentCustom + "rem");
-    root.style.setProperty("--tree-line-x", Math.min(PREFS.indentCustom * 0.77, 1.2) + "rem");
-  } else {
-    root.style.setProperty("--tree-indent", INDENT_LEVELS[PREFS.indent].indent);
-    root.style.setProperty("--tree-line-x", INDENT_LEVELS[PREFS.indent].lineX);
-  }
+  root.style.setProperty("--tree-indent", PREFS.indent === "custom" ? PREFS.indentCustom + "rem" : INDENT_LEVELS[PREFS.indent]);
   const classes = {
     "no-guide-lines": !PREFS.guideLines, zebra: PREFS.zebra, "zebra-full": PREFS.zebraSpan === "full", "zebra-medium": PREFS.zebraStrength === "medium",
     "folder-icons": PREFS.folderIcons, "icon-accent": PREFS.iconColor === "accent", "no-type-badges": !PREFS.typeBadges,
@@ -1378,7 +1387,7 @@ const prefValue = k => DOC_PREFS[k] ? DOC_PREFS[k].get() : PREFS[k];
 const SETTING_CHOICES = {}; // pref -> [value, label, title][], so a button's data-val maps back to a typed value
 function settingSeg(k, choices) {
   SETTING_CHOICES[k] = choices;
-  return `<div class="indent-track">${choices.map(([v, label, title]) => {
+  return `<div class="indent-track${choices.length > 4 ? " tight" : ""}">${choices.map(([v, label, title]) => {
     const on = prefValue(k) === v;
     return `<button class="indent-opt ${on ? "selected" : ""}" data-pref="${k}" data-val="${v}" aria-pressed="${on}"${title ? ` title="${title}"` : ""}>${label}</button>`;
   }).join("")}</div>`;
@@ -1409,7 +1418,7 @@ function renderSettings() {
     ${settingToggle("reveal", "Reveal the open file", "Opens its folders and scrolls the tree to it.")}
     <div class="settings-modal-section">Lists</div>
     ${settingRow("Start on tab", settingSeg("defaultTab", [["folders", "Folders"], ["added", "New"], ["updated", "Updated"], ["authors", "Authors"], ["history", "History"]]), { hint: "The tab the panel opens on when you load the site." })}
-    ${settingRow("New and Updated show", settingSeg("recentDays", [[0, "Latest"], [7, "7 days"], [30, "30 days"], [90, "90 days"]]), { hint: "Latest is the last 40 commits." })}
+    ${settingRow("New and Updated show", settingSeg("recentDays", [[0, "Latest"], [7, "7d", "The last 7 days"], [30, "30d", "The last 30 days"], [90, "90d", "The last 90 days"]]), { hint: "Latest is the last 40 commits. 7d is the last 7 days." })}
     <div class="settings-modal-section">Documents</div>
     ${settingRow("Text", `<div class="settings-stepper"><button data-mdstep="-1" aria-label="Smaller document text"${step === 0 ? " disabled" : ""}>A&minus;</button><span class="settings-value">${settingPct(mdTextScale)}</span><button data-mdstep="1" aria-label="Larger document text"${step === MD_TEXT_STEPS.length - 1 ? " disabled" : ""}>A+</button></div>`)}
     ${settingRow("Width", settingSeg("mdWidth", [["narrow", "Narrow"], ["normal", "Normal"], ["full", "Full"]]))}
@@ -1424,6 +1433,11 @@ function refreshSettings(focusSel) {
   const el = focusSel && settingsBody.querySelector(focusSel); if (el) el.focus();
 }
 function closeSettings() { settingsBackdrop.classList.remove("open"); settingsBtn.classList.remove("active"); }
+// Sort also orders the file counter and an open folder page, which the sidebar redraw does not reach.
+function applySortToPage() {
+  const r = state.route; if (!r) return;
+  if (r.kind === "p") renderHeader(); else if (r.kind === "f") renderRoute(true);
+}
 // A document preference reflows the page; keep the reader's place and redraw the doc footers.
 function changeDocPref(change) { keepMdReadingPosition(() => { change(); applyMdReaderPrefs(); applyDocTheme(); }); renderFooters(); }
 
@@ -1446,7 +1460,7 @@ settingsBody.addEventListener("click", e => {
   } else {
     const k = b.dataset.pref, v = SETTING_CHOICES[k].find(([val]) => String(val) === b.dataset.val)[0];
     if (DOC_PREFS[k]) changeDocPref(() => DOC_PREFS[k].set(v));
-    else { PREFS[k] = v; savePref(k); if (k === "theme") applyTheme(); else applyPrefs(); }
+    else { PREFS[k] = v; savePref(k); if (k === "theme") applyTheme(); else applyPrefs(); if (k === "sort") applySortToPage(); }
     refreshSettings(`[data-pref="${k}"][data-val="${b.dataset.val}"]`);
   }
 });
@@ -1457,9 +1471,10 @@ settingsBody.addEventListener("input", e => {
   PREFS.indentCustom = Math.round(v * 100) / 100; savePref("indentCustom"); applyPrefs();
 });
 $("#settingsReset").onclick = () => {
+  const sortWas = PREFS.sort;
   Object.entries(PREF_SPEC).forEach(([k, spec]) => { PREFS[k] = spec[2]; savePref(k); });
   changeDocPref(() => { mdTextScale = 1; mdWidth = "normal"; mdDocTheme = "match"; save(KEYS.mdTextScale, 1); save(KEYS.mdWidth, "normal"); save(KEYS.mdTheme, "match"); });
-  applyTheme(); applyPrefs(); refreshSettings();
+  applyTheme(); applyPrefs(); if (PREFS.sort !== sortWas) applySortToPage(); refreshSettings();
 };
 
 /* ───────────── Search (names, folders, descriptions and tags) ───────────── */

@@ -10,6 +10,19 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 - **The generator.** `generator/build_site.py` reads git history and writes the site, using only the Python standard library.
 - **Reader settings in a popover.** Readers can set the theme and resize interface text and tree text separately. They can also turn on row stripes and open or closed folder icons, and change row density and tree sorting. Other settings choose the starting tab and the date range for New and Updated.
 - **The Initech sample and demo.** `examples/build_demo.py` builds the real viewer and generator into one self-contained page.
-- **Browser checks.** `tests/run_browser_checks.mjs` runs 48 settings behavior checks against a demo build or a live site.
+- **Browser checks.** `tests/run_browser_checks.mjs` runs 64 settings behavior checks against a demo build or a live site.
 - **A live demo that stays current.** `.github/workflows/demo.yml` tests the generator, builds the demo from the same commit and runs the browser checks. Pushes to `main` that pass are published to <https://projects.prisantlabs.com/repo-pages/>.
 - **Project docs.** These cover features, settings, design and architecture, with third-party notices and agent instructions.
+
+### Changed
+
+- **Sort reaches menus and folder pages.** Under Recently updated, breadcrumb menus and folder pages now use the tree's order. An open folder page re-sorts as soon as the setting changes.
+- **Date options have shorter labels.** New and Updated show now offers 7d, 30d and 90d, so the row stays on one line. Tooltips spell out each window.
+
+### Fixed
+
+- **Search palette rows follow Interface text.** Result names, paths and headings now grow with the rest of the palette.
+- **Interface badges follow Interface text.** Type badges in the header row, menus and palette now grow with it. Badges on pages stay the same size.
+- **The guide line follows the chevron in every indent mode.** Compact and Custom now use the same formula as Default, and each level moves right by exactly the chosen indent.
+- **Start on tab stays on one line** at default text size in the default panel width.
+- **Stripes restart at each group.** Every commit and author group now opens on the same shade.

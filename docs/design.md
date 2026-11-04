@@ -66,7 +66,7 @@ Use this wording exactly. A dash in the Hint column means the row has no hint.
 | Tree | Wrap long names | Toggle | - |
 | Tree | Reveal the open file | Toggle | Opens its folders and scrolls the tree to it. |
 | Lists | Start on tab | Folders, New, Updated, Authors, History | The tab the panel opens on when you load the site. |
-| Lists | New and Updated show | Latest, 7 days, 30 days, 90 days | Latest is the last 40 commits. |
+| Lists | New and Updated show | Latest, 7d, 30d, 90d | Latest is the last 40 commits. 7d is the last 7 days. |
 | Documents | Text | A−, the percent, A+ | - |
 | Documents | Width | Narrow, Normal, Full | - |
 | Documents | Doc theme | Match, Light, Dark | The same settings as the doc footer. |
@@ -96,6 +96,8 @@ The option rows use flexbox rather than a fixed grid, so they can wrap at large 
 
 - The row wraps, with a `0.25rem` gap.
 - Each button has `flex: 1 0 0`, `min-width: max-content`, `white-space: nowrap` and padding `0.3rem 0.4rem`.
+- A row of five options, which is only Start on tab, adds the class `tight`. It has a `0.15rem` gap and no side padding, and each button has `flex: 1 1 auto`. This keeps the row on one line at default text size in the 300px panel, and the buttons share what is left over.
+- The date buttons use short labels, `7d`, `30d` and `90d`, and spell out the window in their tooltips.
 - Buttons are equal width while they fit. When they stop fitting, they wrap to a second line and keep their labels whole.
 - The selected style is the existing one: accent border, accent text and the accent hover background.
 
@@ -120,20 +122,19 @@ Four rules keep the tree aligned at every text size:
 1. The guide line runs under the center of the chevron.
 2. A file's badge starts where a sibling folder's name starts.
 3. Everything that belongs to a row grows with `--tree-scale`.
-4. A nested list's padding never goes below zero.
+4. One nesting level moves a row right by exactly the indent, in every indent mode.
 
 | Value | Formula |
 |---|---|
 | Chevron size, `--tree-chev` | `13px × tree scale` |
 | Folder icon size | `15px × tree scale` |
 | Icon's share of the row, `--tree-icon-w` | `15px × tree scale + 0.35rem` when icons are on, `0` when off |
-| Row padding | `var(--tree-row-py) 0.85rem` |
+| Row left padding, `--tree-row-px` | `max(0, min(0.85rem, indent − 6.5px × tree scale))`. Compact and small Custom values shrink it, and Default never does |
+| Row padding | `var(--tree-row-py) 0.85rem var(--tree-row-py) var(--tree-row-px)` |
 | Chevron right margin | `0.3rem` |
 | Icon right margin | `0.35rem` |
-| File row left padding | `0.85rem + --tree-chev + 0.3rem + --tree-icon-w` |
-| Guide-line x, Default | `0.85rem + 6.5px × tree scale` |
-| Guide-line x, Compact | `0.65rem + 6.5px × tree scale` |
-| Guide-line x, Custom | `min(value × 0.77, 1.2)` rem, not scaled. See [Known gaps](settings-spec.md#known-gaps) |
+| File row left padding | `--tree-row-px + --tree-chev + 0.3rem + --tree-icon-w` |
+| Guide-line x, `--tree-line-x` | `--tree-row-px + 6.5px × tree scale`, in every indent mode |
 | Nested list | `margin-left` is the guide-line x, `padding-left` is `max(0px, indent − guide-line x)`, and the left border is the guide line |
 
 Tree rows need `position: relative`, because full-row stripes are placed against them.
@@ -210,7 +211,8 @@ Each size below is multiplied by its scale. All other font sizes in the viewer a
 | Header | Home button 0.7, site title 0.9, breadcrumb 0.76, search trigger 0.7, its key hint 0.6, Share 0.72, file counter 0.66, Browse 0.7, file name 0.82, info icon 0.6, source links 0.68, segmented buttons 0.64 |
 | Menus and info | Menu item 0.76, menu number 0.6, info popover 0.7, info code 0.66 |
 | Doc footer | Footer 0.64, buttons 0.66 |
-| Palette | Input 0.9, result snippet 0.66, footer 0.6 |
+| Palette | Input 0.9, heading 0.66, result name 0.74, result path 0.6, result snippet 0.66, footer 0.6 |
+| Type badges | 0.5, in the header row, menus and palette only. Page badges are content and keep this size unscaled |
 | Toast | 0.72 |
 
 ### Multiplied by `--tree-scale`, inside the sidebar's list only

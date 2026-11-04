@@ -30,7 +30,7 @@ flowchart LR
 | Generator tests | `generator/test_build_site.py` | Standard library `unittest` tests that build temporary repositories |
 | Sample | `examples/initech/`, `examples/initech-history.json` | 88 parody files, and a script of 41 commits that gives them a history |
 | Demo build | `examples/build_demo.py` | Replays the history, runs the generator and folds everything into one page |
-| Browser checks | `tests/browser_checks.js` | 48 settings behavior checks that run inside the page |
+| Browser checks | `tests/browser_checks.js` | 64 settings behavior checks that run inside the page |
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
 | Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
 
