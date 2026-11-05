@@ -11,7 +11,7 @@ repo-pages turns a git repository into a static website where every file is read
 | `viewer/index.html` | The whole interface, in one file. It is about 140 KB, so search it instead of reading it all |
 | `viewer/vendor/` | Vendored `marked` and DOMPurify. Follow `viewer/vendor/README.md` to update them |
 | `generator/` | `build_site.py` and its tests, using only the Python standard library |
-| `.github/vendor-watch/` | A list of vendored versions for Dependabot. Nothing installs it |
+| `tests/vendor-watch/` | A list of vendored versions for Dependabot. Nothing installs it |
 | `examples/` | The Initech parody sample, its commit script and `build_demo.py` |
 | `tests/` | Browser checks and their runner |
 | `docs/` | Features, settings spec, design notes, architecture and ideas |
@@ -46,7 +46,7 @@ Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedg
 | A setting | `docs/settings-spec.md`, and `docs/design.md` for wording or measurements |
 | The build, data contract or checks | `docs/architecture.md` |
 | What gets published, or how untrusted files are handled | `SECURITY.md` and the README FAQ |
-| A vendored library | `viewer/vendor/README.md`, `THIRD-PARTY-NOTICES.md` and `.github/vendor-watch/package.json` |
+| A vendored library | `viewer/vendor/README.md`, `THIRD-PARTY-NOTICES.md` and `tests/vendor-watch/package.json` |
 | Commands or repository rules | This file |
 
 ## Sample content

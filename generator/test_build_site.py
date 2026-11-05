@@ -178,7 +178,7 @@ class RepositoryTests(unittest.TestCase):
 
     def test_vendor_watch_matches_the_vendored_files(self):
         """A Dependabot bump to the watch list fails here until the library itself is updated."""
-        watch = json.loads((self.root / ".github/vendor-watch/package.json").read_text(encoding="utf-8"))["dependencies"]
+        watch = json.loads((self.root / "tests/vendor-watch/package.json").read_text(encoding="utf-8"))["dependencies"]
         vendor = self.root / "viewer/vendor"
         self.assertTrue((vendor / f"marked-{watch['marked']}.umd.js").exists())
         self.assertTrue((vendor / f"purify-{watch['dompurify']}.min.js").exists())
