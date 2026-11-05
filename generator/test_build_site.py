@@ -176,6 +176,13 @@ class RepositoryTests(unittest.TestCase):
         for path in ("viewer/index.html", "generator/build_site.py"):
             self.assertIn(line, (self.root / path).read_text(encoding="utf-8"), path)
 
+    def test_adopter_workflow_keeps_history_and_hidden_files(self):
+        """A shallow clone breaks authors and dates, and the upload action drops dotfiles by default."""
+        text = (self.root / "templates/repo-pages.yml").read_text(encoding="utf-8")
+        self.assertIn("fetch-depth: 0", text)
+        self.assertIn("include-hidden-files: true", text)
+        self.assertIn(".github/scripts/build_site.py", text)
+
     def test_vendor_watch_matches_the_vendored_files(self):
         """A Dependabot bump to the watch list fails here until the library itself is updated."""
         watch = json.loads((self.root / "tests/vendor-watch/package.json").read_text(encoding="utf-8"))["dependencies"]

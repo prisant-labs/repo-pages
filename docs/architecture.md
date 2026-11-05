@@ -34,12 +34,15 @@ flowchart LR
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
 | Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
 | Vendor watch | `tests/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
+| Adopter workflow | `templates/repo-pages.yml` | The workflow an adopter copies. It builds with full history and deploys to GitHub Pages |
 
 ## Two layouts
 
 This repository keeps the viewer in `viewer/` and the generator in `generator/`, because they are the product here.
 
 The generator expects a different layout in the repository it publishes. `SITE_DIR` in `build_site.py` is `.github/site`, and `.github/**` is never published. A consumer therefore copies the viewer to `.github/site/` and the generator to `.github/scripts/`. `build_demo.py` takes both paths as arguments and sets up that layout in a temporary repository.
+
+The adopter workflow sets `include-hidden-files: true` on the artifact upload. The upload action otherwise drops dotfiles, which would silently undo `includeHidden` in `config.json`. The generator therefore stays the only place that decides what gets published. Dependabot does not read this template, so update its action versions by hand when `demo.yml` changes.
 
 ## What the generator publishes
 
