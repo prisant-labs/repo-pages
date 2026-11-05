@@ -147,11 +147,41 @@ class BuildTests(unittest.TestCase):
         self.assertEqual(added[4], "Add x again")
         self.assertEqual(last[4], "Add x again")
 
+    def test_symlinks_are_not_published(self):
+        outside = Path(self.tmp.name) / "outside.txt"
+        outside.write_text("outside the repository")
+        self.write("readme.md", "# Kept")
+        run(self.repo, "config", "core.symlinks", "true")
+        try:
+            os.symlink(outside, self.repo / "link.txt")
+        except OSError:
+            self.skipTest("this machine cannot create symlinks")
+        commit(self.repo, "Add a link", "Ann", "2026-01-01T10:00:00Z")
+        data, out = self.build()
+        self.assertEqual([f["path"] for f in data["files"]], ["readme.md"])
+        self.assertFalse((out / "link.txt").exists())
+
     def test_reserved_paths_fail_the_build(self):
         self.write("index.html", "<p>clash</p>")
         commit(self.repo, "Add root index", "Ann", "2026-01-01T10:00:00Z")
         with self.assertRaises(SystemExit):
             self.build()
+
+
+class RepositoryTests(unittest.TestCase):
+    root = SCRIPT.parent.parent
+
+    def test_copied_files_carry_the_license_notice(self):
+        line = next(l for l in (self.root / "LICENSE").read_text(encoding="utf-8").splitlines() if l.startswith("Copyright"))
+        for path in ("viewer/index.html", "generator/build_site.py"):
+            self.assertIn(line, (self.root / path).read_text(encoding="utf-8"), path)
+
+    def test_vendor_watch_matches_the_vendored_files(self):
+        """A Dependabot bump to the watch list fails here until the library itself is updated."""
+        watch = json.loads((self.root / ".github/vendor-watch/package.json").read_text(encoding="utf-8"))["dependencies"]
+        vendor = self.root / "viewer/vendor"
+        self.assertTrue((vendor / f"marked-{watch['marked']}.umd.js").exists())
+        self.assertTrue((vendor / f"purify-{watch['dompurify']}.min.js").exists())
 
 
 if __name__ == "__main__":

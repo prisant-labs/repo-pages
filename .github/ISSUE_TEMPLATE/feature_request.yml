@@ -1,0 +1,27 @@
+name: Feature request
+description: Suggest a specific change to the viewer or the generator.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check [docs/ideas.md](https://github.com/prisant-labs/repo-pages/blob/main/docs/ideas.md) first. For a new setting, also check the "Deliberately left out" list in [docs/settings-spec.md](https://github.com/prisant-labs/repo-pages/blob/main/docs/settings-spec.md).
+  - type: textarea
+    id: goal
+    attributes:
+      label: What are you trying to do?
+      description: Describe the problem or the goal, not only the feature.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+      description: The change you have in mind.
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: What do you do today?
+      description: Any workaround you use now.

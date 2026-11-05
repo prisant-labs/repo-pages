@@ -1,4 +1,28 @@
 #!/usr/bin/env python3
+# Repo Pages: https://github.com/prisant-labs/repo-pages
+#
+# MIT License
+#
+# Copyright (c) 2026 Prisant Labs / Jonathan Prisant
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
 """
 Build the repo-pages site for GitHub Pages.
 
@@ -36,6 +60,7 @@ RESERVED = {"index.html", DATA_FILE}
 DATA_VERSION = 1
 
 DEFAULT_EXCLUDE = [".github/**", "**/.DS_Store", "**/.gitkeep"]
+REGULAR_MODES = {"100644", "100755"}
 
 
 # ── Globs ──
@@ -86,7 +111,19 @@ def git(repo: Path, *args: str) -> str:
 
 
 def tracked_files(repo: Path) -> list[str]:
-    return [p for p in git(repo, "ls-files", "-z").split("\0") if p]
+    """Tracked regular files only.
+
+    A symlink is skipped because copying it would publish its target, which can
+    be outside the repository or a file that `exclude` hides. A submodule is
+    skipped because it has no content of its own here.
+    """
+    files = []
+    for row in git(repo, "ls-files", "-s", "-z").split("\0"):
+        if row:
+            meta, path = row.split("\t", 1)
+            if meta.split(" ", 1)[0] in REGULAR_MODES:
+                files.append(path)
+    return files
 
 
 def read_log(repo: Path) -> list[dict]:

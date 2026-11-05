@@ -33,12 +33,17 @@ flowchart LR
 | Browser checks | `tests/browser_checks.js` | 64 settings behavior checks that run inside the page |
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
 | Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
+| Vendor watch | `.github/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
 
 ## Two layouts
 
 This repository keeps the viewer in `viewer/` and the generator in `generator/`, because they are the product here.
 
 The generator expects a different layout in the repository it publishes. `SITE_DIR` in `build_site.py` is `.github/site`, and `.github/**` is never published. A consumer therefore copies the viewer to `.github/site/` and the generator to `.github/scripts/`. `build_demo.py` takes both paths as arguments and sets up that layout in a temporary repository.
+
+## What the generator publishes
+
+The generator publishes tracked regular files, minus `.github/**`, hidden files and `exclude` patterns. It reads each file's mode from `git ls-files -s` and skips symlinks and submodules. Copying a symlink would publish its target, which can be outside the repository or a file that `exclude` hides.
 
 ## The data contract
 
@@ -51,13 +56,13 @@ The generator writes `site-data.json` next to the viewer. It holds the site conf
 1. It replays `initech-history.json` into a temporary git repository, with backdated authors and commit dates.
 2. It runs the real generator on that repository.
 3. It swaps three lines in the viewer, so files load from the page instead of the server. Each swap must match exactly once, so the build stops if those lines change.
-4. It writes one HTML file with the libraries, the data file and every published file inlined.
+4. It writes one HTML file with the libraries, the data file and every published file inlined. It also adds a `noindex` tag, which matches the projects hub until the project is announced.
 
 Dates are relative to the build, so the output changes on every run. **Do not commit the built page.** Build it where you need it.
 
 ## Continuous integration
 
-`.github/workflows/demo.yml` runs on pull requests and on pushes to `main` that touch `viewer/`, `generator/`, `examples/`, `tests/` or the workflow. It can also be started by hand.
+`.github/workflows/demo.yml` runs on every pull request, and on pushes to `main` that touch `viewer/`, `generator/`, `examples/`, `tests/` or the workflow. It can also be started by hand. Pull requests have no path filter because a required check must report on every pull request, including docs-only ones.
 
 | Job | Runs on | What it does |
 |---|---|---|
@@ -66,7 +71,7 @@ Dates are relative to the build, so the output changes on every run. **Do not co
 
 The demo comes from the viewer and generator in the same commit, so it cannot fall behind them. A failed test or check stops the run before anything is published.
 
-**The published site is public, although this repository is private.** Only the built page is published, which is the viewer, the generator's output and the sample content. It is served at <https://projects.prisantlabs.com/repo-pages/>, because the organization's site owns that domain.
+The built page is the viewer, the generator's output and the sample content. It is served at <https://projects.prisantlabs.com/repo-pages/>, because the organization's site owns that domain.
 
 ## Settings
 
