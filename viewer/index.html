@@ -737,8 +737,8 @@ async function fetchText(f) {
 /* ───────────── Markdown: pinned marked + DOMPurify, loaded on first use ───────────── */
 //   marked 18.0.14: lib/marked.umd.js, sha256 21568877a938d2c4e7d74e27f18e60da96bb73a68809610ca39216e1efebae62
 const MARKED_SRC = "_viewer/vendor/marked-18.0.14.umd.js";
-//   DOMPurify 3.4.16: dist/purify.min.js, sha256 2c90a9b46d6463f26038a29b686e82bc91de01fdac9d5229e7cfe3b360134ea2
-const PURIFY_SRC = "_viewer/vendor/purify-3.4.16.min.js";
+//   DOMPurify 3.4.17: dist/purify.min.js, sha256 cd37898f9782adf54820c413191b5691803f0f137c799d6edcfd38523b4c2c31
+const PURIFY_SRC = "_viewer/vendor/purify-3.4.17.min.js";
 let mdLibs = null;
 function loadScript(src) {
   return new Promise((resolve, reject) => { const s = document.createElement("script"); s.src = src; s.onload = resolve; s.onerror = () => reject(new Error("Could not load " + src)); document.head.appendChild(s); });

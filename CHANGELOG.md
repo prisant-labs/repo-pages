@@ -20,6 +20,10 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 - **Sort reaches menus and folder pages.** Under Recently updated, breadcrumb menus and folder pages now use the tree's order. An open folder page re-sorts as soon as the setting changes.
 - **Date options have shorter labels.** New and Updated show now offers 7d, 30d and 90d, so the row stays on one line. Tooltips spell out each window.
 
+### Security
+
+- **DOMPurify is now 3.4.17.** This version patches GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr and GHSA-c6gr-qvv4-5v3f. The viewer calls DOMPurify with its default string output and no hooks, which appears to avoid the affected modes.
+
 ### Fixed
 
 - **Search palette rows follow Interface text.** Result names, paths and headings now grow with the rest of the palette.
