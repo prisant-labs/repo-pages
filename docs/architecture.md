@@ -33,7 +33,7 @@ flowchart LR
 | Browser checks | `tests/browser_checks.js` | 64 settings behavior checks that run inside the page |
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
 | Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
-| Vendor watch | `.github/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
+| Vendor watch | `tests/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
 
 ## Two layouts
 
