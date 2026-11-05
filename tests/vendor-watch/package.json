@@ -3,7 +3,7 @@
   "private": true,
   "description": "Not installed. Lists the libraries in viewer/vendor so Dependabot reports new versions and advisories. See viewer/vendor/README.md.",
   "dependencies": {
-    "dompurify": "3.4.16",
+    "dompurify": "3.4.17",
     "marked": "18.0.14"
   }
 }
