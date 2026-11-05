@@ -26,7 +26,7 @@ npm install --no-save --no-package-lock playwright
 node tests/run_browser_checks.mjs
 ```
 
-Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. All three steps must pass before a merge, and `.github/workflows/demo.yml` repeats them on every pull request. Read the results rather than assuming them.
+Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. All three steps must pass before a merge, and `.github/workflows/demo.yml` repeats them on every pull request. The "Protect main" ruleset blocks direct pushes to `main`, allows squash merges only, and requires the workflow's `build` check. Read the results rather than assuming them.
 
 ## Rules
 
