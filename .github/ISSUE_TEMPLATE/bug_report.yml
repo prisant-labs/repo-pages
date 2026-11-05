@@ -1,0 +1,56 @@
+name: Bug report
+description: Something in the viewer, the generator or the demo does not work as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. A small file or repository that shows the problem is the fastest way to a fix.
+
+        Found a security problem? Please report it privately instead, as [SECURITY.md](https://github.com/prisant-labs/repo-pages/blob/main/SECURITY.md) describes.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you see, and what did you expect to see instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open projects/y2k-remediation/notes/standups/day-03.md in the demo.
+        2. Press the gear and change Tree text to XL.
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where does it happen?
+      options:
+        - In the live demo
+        - On my own site, in the viewer
+        - On my own site, while building with the generator
+        - Somewhere else
+    validations:
+      required: true
+  - type: input
+    id: file-type
+    attributes:
+      label: File type involved
+      description: Leave this empty if the bug does not depend on a file.
+      placeholder: For example, CSV or Markdown
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and operating system
+      placeholder: For example, Firefox on Windows 11
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit you copied
+      description: Only for your own site. Name the repo-pages commit your viewer or generator came from, if you know it.

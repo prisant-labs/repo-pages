@@ -213,7 +213,8 @@ def bundle(site: Path, out: Path) -> tuple[int, int]:
     inject = "".join(script_tag(v.read_text(encoding="utf-8")) for v in vendor)
     inject += script_tag(EMBED_JS.replace("__DATA__", js_literal(data)).replace("__FILES__", js_literal(files)))
     html = html.replace(MAIN_SCRIPT, inject + MAIN_SCRIPT)
-    html = html.replace("<title>Repo Pages</title>", f"<title>{SITE_CONFIG['title']} (demo)</title>", 1)
+    # Pre-launch, like the projects hub. Remove the robots tag when the project is announced.
+    html = html.replace("<title>Repo Pages</title>", f'<meta name="robots" content="noindex" />\n<title>{SITE_CONFIG["title"]} (demo)</title>', 1)
 
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
