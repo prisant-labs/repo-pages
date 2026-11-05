@@ -25,6 +25,10 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 - **The demo is marked `noindex` until launch,** which matches the projects hub.
 - **Every pull request now runs the checks,** including docs-only ones.
 
+### Security
+
+- **DOMPurify is now 3.4.17.** This version patches GHSA-cg2g-xh64-v4q7, GHSA-mrv2-3pqr-j5jr and GHSA-c6gr-qvv4-5v3f. The viewer calls DOMPurify with its default string output and no hooks, which appears to avoid the affected modes.
+
 ### Fixed
 
 - **Search palette rows follow Interface text.** Result names, paths and headings now grow with the rest of the palette.
