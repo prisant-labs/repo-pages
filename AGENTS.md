@@ -11,7 +11,7 @@ repo-pages turns a git repository into a static website where every file is read
 | `viewer/index.html` | The whole interface, in one file. It is about 140 KB, so search it instead of reading it all |
 | `viewer/vendor/` | Vendored `marked` and DOMPurify. Follow `viewer/vendor/README.md` to update them |
 | `generator/` | `build_site.py` and its tests, using only the Python standard library |
-| `.github/vendor-watch/` | A list of vendored versions for Dependabot. Nothing installs it |
+| `tests/vendor-watch/` | A list of vendored versions for Dependabot. Nothing installs it |
 | `examples/` | The Initech parody sample, its commit script and `build_demo.py` |
 | `tests/` | Browser checks and their runner |
 | `docs/` | Features, settings spec, design notes, architecture and ideas |
@@ -26,7 +26,7 @@ npm install --no-save --no-package-lock playwright
 node tests/run_browser_checks.mjs
 ```
 
-Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. All three steps must pass before a merge, and `.github/workflows/demo.yml` repeats them on every pull request. Read the results rather than assuming them.
+Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. All three steps must pass before a merge, and `.github/workflows/demo.yml` repeats them on every pull request. The "Protect main" ruleset blocks direct pushes to `main`, allows squash merges only, and requires the workflow's `build` check. Read the results rather than assuming them.
 
 ## Rules
 
@@ -46,7 +46,7 @@ Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedg
 | A setting | `docs/settings-spec.md`, and `docs/design.md` for wording or measurements |
 | The build, data contract or checks | `docs/architecture.md` |
 | What gets published, or how untrusted files are handled | `SECURITY.md` and the README FAQ |
-| A vendored library | `viewer/vendor/README.md`, `THIRD-PARTY-NOTICES.md` and `.github/vendor-watch/package.json` |
+| A vendored library | `viewer/vendor/README.md`, `THIRD-PARTY-NOTICES.md` and `tests/vendor-watch/package.json` |
 | Commands or repository rules | This file |
 
 ## Sample content

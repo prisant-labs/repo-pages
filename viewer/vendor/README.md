@@ -13,7 +13,7 @@ The viewer (`../index.html`) loads both on the first Markdown render and passes 
 
 ## Knowing when to update
 
-`.github/vendor-watch/package.json` lists the vendored versions. Nothing installs it. It exists so Dependabot reports new versions and security advisories for these files. A generator test checks that it matches the files here, so a Dependabot pull request fails CI until someone follows the steps below.
+`tests/vendor-watch/package.json` lists the vendored versions. Nothing installs it. It exists so Dependabot reports new versions and security advisories for these files. A generator test checks that it matches the files here, so a Dependabot pull request fails CI until someone follows the steps below.
 
 ## Updating a library
 
@@ -21,5 +21,5 @@ The viewer (`../index.html`) loads both on the first Markdown render and passes 
 2. Copy the file named above into this folder with the new version in its name, and delete the old one.
 3. Run `shasum -a 256 <file>` and update the file name and hash here and the `MARKED_SRC` or `PURIFY_SRC` constant in `../index.html`.
 4. Copy the package's license files over the matching `LICENSE-*` files here.
-5. Update the version in `.github/vendor-watch/package.json` and `THIRD-PARTY-NOTICES.md`.
+5. Update the version in `tests/vendor-watch/package.json` and `THIRD-PARTY-NOTICES.md`.
 6. Build the site locally and open a few Markdown files.

@@ -1,6 +1,7 @@
 # Reports new versions of the workflow actions and the vendored viewer libraries.
 #
-# The npm entry reads .github/vendor-watch/package.json, which nothing installs. Its pull
+# The npm entry reads tests/vendor-watch/package.json, which nothing installs. It sits
+# outside .github/ because Dependabot could not open pull requests against a manifest there. Its pull
 # requests are expected to fail CI: a generator test stops until viewer/vendor holds the
 # new version. Treat one as a signal to follow viewer/vendor/README.md.
 version: 2
@@ -15,7 +16,7 @@ updates:
           - "*"
     open-pull-requests-limit: 1
   - package-ecosystem: npm
-    directory: /.github/vendor-watch
+    directory: /tests/vendor-watch
     schedule:
       interval: weekly
     open-pull-requests-limit: 2

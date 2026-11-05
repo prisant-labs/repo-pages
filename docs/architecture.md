@@ -33,7 +33,7 @@ flowchart LR
 | Browser checks | `tests/browser_checks.js` | 64 settings behavior checks that run inside the page |
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
 | Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
-| Vendor watch | `.github/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
+| Vendor watch | `tests/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
 
 ## Two layouts
 
@@ -70,6 +70,8 @@ Dates are relative to the build, so the output changes on every run. **Do not co
 | `deploy` | `main` only, not pull requests | Publishes the uploaded page to GitHub Pages |
 
 The demo comes from the viewer and generator in the same commit, so it cannot fall behind them. A failed test or check stops the run before anything is published.
+
+The "Protect main" ruleset requires the `build` check on every pull request. It also requires a pull request for every change to `main`, allows squash merges only, and blocks force pushes and branch deletion. Repository admins can bypass only the pull request requirement.
 
 The built page is the viewer, the generator's output and the sample content. It is served at <https://projects.prisantlabs.com/repo-pages/>, because the organization's site owns that domain.
 
