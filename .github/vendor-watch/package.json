@@ -1,0 +1,9 @@
+{
+  "name": "repo-pages-vendor-watch",
+  "private": true,
+  "description": "Not installed. Lists the libraries in viewer/vendor so Dependabot reports new versions and advisories. See viewer/vendor/README.md.",
+  "dependencies": {
+    "dompurify": "3.4.16",
+    "marked": "18.0.14"
+  }
+}

@@ -3,20 +3,21 @@
 # https://projects.prisantlabs.com/repo-pages/ - the org site owns that domain, and
 # GitHub serves this repository's Pages site under it at /repo-pages/.
 #
-# The published site is public even though this repository is private.
+# Pull requests have no path filter, because the "Protect main" ruleset requires the
+# build check. A filtered workflow would never report on a docs-only pull request,
+# and that pull request could never merge.
 name: Demo
 
 on:
   push:
     branches: [main]
-    paths: &paths
+    paths:
       - 'viewer/**'
       - 'generator/**'
       - 'examples/**'
       - 'tests/**'
       - '.github/workflows/demo.yml'
   pull_request:
-    paths: *paths
   workflow_dispatch:
 
 permissions:

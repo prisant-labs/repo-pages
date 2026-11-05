@@ -64,7 +64,11 @@ To publish it, deploy `_site/` to GitHub Pages from a workflow. Check out with `
 
 ## FAQ
 
-**Does every tracked file get published?** Yes, apart from `.github/**`, hidden files and your `exclude` patterns. Check what you are publishing before you deploy.
+**Does every tracked file get published?** Yes, apart from `.github/**`, hidden files, symlinks, submodules and your `exclude` patterns. Check what you are publishing before you deploy.
+
+**Does a site name people?** Yes. It shows commit author names and commit subjects, and the Authors tab lists everyone. It does not publish author email addresses.
+
+**Do HTML files run?** Yes, on the site's own origin by default. Set `sandboxHtml` to `true` if you publish HTML you do not fully trust. [SECURITY.md](SECURITY.md) explains why.
 
 **Is the site private?** Not by default. GitHub offers access-controlled Pages only on certain plans, so check GitHub's current rules before you publish anything sensitive.
 
@@ -86,3 +90,11 @@ To publish it, deploy `_site/` to GitHub Pages from a workflow. Check out with `
 | [examples/README.md](examples/README.md) | The Initech sample and how to change it |
 | [CHANGELOG.md](CHANGELOG.md) | What changed |
 | [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) | Licenses for the vendored libraries and icon shapes |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to report a bug, run the checks and open a pull request |
+| [SECURITY.md](SECURITY.md) | How to report a vulnerability, and what the project treats as in scope |
+
+## License
+
+repo-pages is under the [MIT license](LICENSE). The vendored libraries and icon shapes keep their own licenses, as [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) lists.
+
+The Initech sample is a parody of the 1999 film *Office Space*, and it is not affiliated with the film or its owners. The license covers the sample's original text, and it grants no rights to the film's names or characters.

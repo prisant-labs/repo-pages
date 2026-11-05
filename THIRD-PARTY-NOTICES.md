@@ -8,6 +8,18 @@ The viewer ships two vendored libraries and uses icon shapes from a third projec
 | DOMPurify 3.4.17 | Sanitizing rendered Markdown | Apache-2.0 or MPL-2.0 | [viewer/vendor/README.md](viewer/vendor/README.md) |
 | [Lucide](https://lucide.dev) | The outline folder icons in the tree | ISC | The notice below |
 
+## marked and DOMPurify
+
+Their full license texts sit beside the code in `viewer/vendor/`, so they travel with a copied viewer. Each is byte for byte from the package's npm tarball.
+
+| Library | License text |
+|---|---|
+| `marked` | [LICENSE-marked](viewer/vendor/LICENSE-marked) |
+| DOMPurify, Apache-2.0 | [LICENSE-dompurify-apache](viewer/vendor/LICENSE-dompurify-apache) |
+| DOMPurify, MPL-2.0 | [LICENSE-dompurify-mpl](viewer/vendor/LICENSE-dompurify-mpl) |
+
+Each library's own file also starts with its copyright notice, so the self-contained demo page carries those notices.
+
 ## Lucide
 
 The same notice is in a comment at the top of `viewer/index.html`, so every build carries it. Keep the two in step.

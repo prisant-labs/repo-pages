@@ -5,7 +5,7 @@ tags: [examples, sample-data, demo, fixture, initech]
 
 # Examples
 
-A sample repo for building, testing and showing repo-pages.
+A sample repo for building, testing and showing repo-pages. It is a parody of the 1999 film *Office Space*, and it is not affiliated with the film or its owners. Every person and address in it is fictional.
 
 | Path | What it is |
 |---|---|
@@ -19,7 +19,7 @@ A sample repo for building, testing and showing repo-pages.
 python3 examples/build_demo.py --viewer viewer --generator generator/build_site.py
 ```
 
-`--viewer` is the folder with the viewer's `index.html` and `vendor/`. `--generator` is `build_site.py`. The build needs only the Python standard library and git. It swaps three lines in the viewer so files load from the page instead of the server, and it stops if any of those lines has changed.
+`--viewer` is the folder with the viewer's `index.html` and `vendor/`. `--generator` is `build_site.py`. The build needs only the Python standard library and git. It swaps three lines in the viewer so files load from the page instead of the server, and it stops if any of those lines has changed. It also adds a `noindex` tag, which stays until the project is announced.
 
 ## Changing the sample
 
