@@ -4,7 +4,7 @@ The viewer ships two vendored libraries and uses icon shapes from a third projec
 
 | Component | Used for | License | Details |
 |---|---|---|---|
-| `marked` 18.0.14 | Rendering Markdown | MIT | [viewer/vendor/README.md](viewer/vendor/README.md) |
+| `marked` 18.1.2 | Rendering Markdown | MIT | [viewer/vendor/README.md](viewer/vendor/README.md) |
 | DOMPurify 3.4.17 | Sanitizing rendered Markdown | Apache-2.0 or MPL-2.0 | [viewer/vendor/README.md](viewer/vendor/README.md) |
 | [Lucide](https://lucide.dev) | The outline folder icons in the tree | ISC | The notice below |
 
