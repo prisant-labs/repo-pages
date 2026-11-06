@@ -4,6 +4,16 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-06
+
+### Changed
+
+- **`marked` is now 18.1.2.** The vendored Markdown library moves up from 18.0.14. Upstream fixes edge cases in lists, block quotes, emphasis, link destinations and HTML blocks, and parsing is faster. Every Markdown file in this repository renders exactly as it did before, but a file that relies on one of those edge cases can render differently.
+
+### Security
+
+- **Hostile Markdown is less able to slow a reader's tab.** `marked` 18.1.0 fixes cubic backtracking on Unicode whitespace in a link destination. No published advisory covers this. DOMPurify still sanitizes everything `marked` produces.
+
 ## [1.0.0] - 2026-11-05
 
 ### Added

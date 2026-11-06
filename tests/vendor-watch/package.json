@@ -4,6 +4,6 @@
   "description": "Not installed. Lists the libraries in viewer/vendor so Dependabot reports new versions and advisories. See viewer/vendor/README.md.",
   "dependencies": {
     "dompurify": "3.4.17",
-    "marked": "18.0.14"
+    "marked": "18.1.2"
   }
 }
