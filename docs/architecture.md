@@ -34,15 +34,37 @@ flowchart LR
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
 | Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
 | Vendor watch | `tests/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
-| Adopter workflow | `templates/repo-pages.yml` | The workflow an adopter copies. It builds with full history and deploys to GitHub Pages |
+| Action | `action.yml` | Checks, builds and deploys a repository, using this repository's viewer and generator |
+| Preflight | `generator/preflight.py` | Refuses a private repository, and turns setup mistakes into errors that name the fix |
+| Adopter workflow | `templates/repo-pages.yml` | The one file an adopter adds. It carries the permissions and environment |
+
+## The action
+
+An adopter adds `templates/repo-pages.yml` and copies nothing. The workflow runs `prisant-labs/repo-pages@v1`, a composite action, and GitHub downloads this repository for the run. The action finds the viewer and generator through `$GITHUB_ACTION_PATH`, so they always come from the same commit.
+
+| Step | What it does |
+|---|---|
+| Preflight | Stops on a private repository, and on missing Pages settings or `id-token: write`. It runs first, so nothing is checked out or built on a refusal |
+| Checkout | Fetches full history, because authors and dates come from git. It keeps no credentials on disk, because the build does not need them |
+| Build | Runs `build_site.py --viewer` into a temporary folder, and writes the published file list to the run's summary page |
+| Upload and deploy | Publish the folder to GitHub Pages. The `deploy: false` input skips these steps and the preflight |
+
+Some choices here are worth keeping:
+
+- **The inner actions are pinned to commit SHAs,** because every adopter inherits them. A moved tag upstream cannot change what runs.
+- **The upload sets `include-hidden-files: true`.** The upload action otherwise drops dotfiles, which would silently undo `includeHidden`. The generator stays the only place that decides what gets published.
+- **A composite action cannot set permissions or an environment,** so the adopter's workflow carries them. The deploy needs `pages: write` and `id-token: write`. It succeeds without `environment`, but the template keeps it, because `deploy-pages` recommends it and it puts the URL on the run page.
+- **The preflight cannot detect a missing `pages: write` on a public repository,** because reading the settings still succeeds. `deploy-pages` fails with a message that names the permission.
+
+`demo.yml` runs the action with `deploy: false` on every pull request, and checks what it built.
 
 ## Two layouts
 
 This repository keeps the viewer in `viewer/` and the generator in `generator/`, because they are the product here.
 
-The generator expects a different layout in the repository it publishes. `SITE_DIR` in `build_site.py` is `.github/site`, and `.github/**` is never published. A consumer therefore copies the viewer to `.github/site/` and the generator to `.github/scripts/`. `build_demo.py` takes both paths as arguments and sets up that layout in a temporary repository.
+Without `--viewer`, the generator reads the viewer from `.github/site/` in the repository it publishes. `build_demo.py` sets up that layout in a temporary repository. `.github/**` is never published, so neither the viewer's source nor the config appears as a site file.
 
-The adopter workflow sets `include-hidden-files: true` on the artifact upload. The upload action otherwise drops dotfiles, which would silently undo `includeHidden` in `config.json`. The generator therefore stays the only place that decides what gets published. Dependabot does not read this template, so update its action versions by hand when `demo.yml` changes.
+The generator reads its config from `.github/repo-pages.json`, and falls back to `.github/site/config.json`.
 
 ## What the generator publishes
 
@@ -65,11 +87,11 @@ Dates are relative to the build, so the output changes on every run. **Do not co
 
 ## Continuous integration
 
-`.github/workflows/demo.yml` runs on every pull request, and on pushes to `main` that touch `viewer/`, `generator/`, `examples/`, `tests/` or the workflow. It can also be started by hand. Pull requests have no path filter because a required check must report on every pull request, including docs-only ones.
+`.github/workflows/demo.yml` runs on every pull request, and on pushes to `main` that touch `viewer/`, `generator/`, `examples/`, `tests/`, `action.yml` or the workflow. It can also be started by hand. Pull requests have no path filter because a required check must report on every pull request, including docs-only ones.
 
 | Job | Runs on | What it does |
 |---|---|---|
-| `build` | Every trigger | Tests the generator, builds the demo, runs the browser checks and uploads the page |
+| `build` | Every trigger | Runs the action in build-only mode, tests the generator, builds the demo, runs the browser checks and uploads the page |
 | `deploy` | `main` only, not pull requests | Publishes the uploaded page to GitHub Pages |
 
 The demo comes from the viewer and generator in the same commit, so it cannot fall behind them. A failed test or check stops the run before anything is published.

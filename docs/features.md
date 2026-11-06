@@ -48,6 +48,8 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 - A one-page demo built from the real viewer and generator.
 - 64 browser checks for settings behavior.
 - A workflow that runs the tests and checks on every relevant change, and publishes the demo from `main`.
+- A GitHub Action that publishes any repository from one workflow file, with checks before it publishes and a list of what went public.
+- Versioned releases, with a major tag that adopters can follow.
 
 ## Not built yet
 
@@ -56,7 +58,7 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 - Share with a direct-file link. Share copies the current URL today.
 - Mermaid rendering. Diagrams show as labelled source.
 - Full-text search. Search covers names, paths, descriptions and tags.
-- `404.html` recovery of old paths, split data files, a reusable workflow and versioned releases.
+- `404.html` recovery of old paths and split data files.
 - An automated hash test for the vendored libraries. The hashes are recorded in [viewer/vendor/README.md](../viewer/vendor/README.md).
 - Browser checks beyond settings behavior, such as one per file type.
 

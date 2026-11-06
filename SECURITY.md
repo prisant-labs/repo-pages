@@ -2,7 +2,7 @@
 
 ## Supported versions
 
-repo-pages has no versioned releases yet. Security fixes land on `main`, and the [live demo](https://projects.prisantlabs.com/repo-pages/) rebuilds from it. If you copied the viewer or generator into your own repository, copy them again to pick up a fix.
+The latest `v1` release is supported. A workflow that uses `@v1` picks up a fix on its next rebuild, and a workflow pinned to a commit needs that pin updated. The [live demo](https://projects.prisantlabs.com/repo-pages/) rebuilds from `main`.
 
 ## Reporting a vulnerability
 
@@ -18,6 +18,7 @@ Include the steps to reproduce the problem, the browser you used, and a small fi
 repo-pages has no server. Its risks lie in what the generator publishes and in what the viewer does with a repository's files.
 
 - **Files the generator should not publish.** The generator publishes tracked regular files, minus `.github/**`, hidden files and your `exclude` patterns. It skips symlinks and submodules. Anything that makes it publish something else is in scope.
+- **The action.** It refuses a private repository unless `allow-private-repository` is `true`, and it checks out without keeping credentials. Anything that gets around either is in scope.
 - **Markdown that runs code.** The viewer passes every rendered Markdown file through DOMPurify. A Markdown file that still runs script is in scope.
 - **Other file views.** CSV, JSON, YAML, code and image views treat a file's content as data. Any such file that runs script is in scope.
 - **Commit data.** Author names, commit subjects and file paths appear in the page. If one of them can run script, that is in scope.

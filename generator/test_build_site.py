@@ -312,6 +312,14 @@ class RepositoryTests(unittest.TestCase):
         for needed in ("pages: write", "id-token: write", "name: github-pages", "prisant-labs/repo-pages@v1"):
             self.assertIn(needed, text)
 
+    def test_readme_install_commands_match_the_template_and_action(self):
+        """The README is the install path, so its URL and every input it names must exist."""
+        readme = (self.root / "README.md").read_text(encoding="utf-8")
+        action = (self.root / "action.yml").read_text(encoding="utf-8")
+        self.assertIn("repo-pages/v1/templates/repo-pages.yml", readme)
+        for name in re.findall(r"^\| `([\w-]+)` \| `[^`]+` \| ", readme, flags=re.M):
+            self.assertRegex(action, rf"(?m)^  {re.escape(name)}:$")
+
     def test_vendor_watch_matches_the_vendored_files(self):
         """A Dependabot bump to the watch list fails here until the library itself is updated."""
         watch = json.loads((self.root / "tests/vendor-watch/package.json").read_text(encoding="utf-8"))["dependencies"]
