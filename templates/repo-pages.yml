@@ -10,53 +10,26 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # A site only picks up repo-pages fixes when it rebuilds. Uncomment this line
+  # to rebuild every Monday, which suits a repository that rarely changes.
+  # schedule: [{ cron: '0 6 * * 1' }]
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: repo-pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@v7
-        with:
-          # The site reads authors and dates from git. A shallow clone gives
-          # every file the same author and date.
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.12'
-
-      - name: Build the site
-        run: python .github/scripts/build_site.py --out _site
-
-      - name: Upload the site
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: _site
-          # The generator already decides which hidden files to publish, through
-          # includeHidden in config.json. Without this line, they would be dropped here.
-          include-hidden-files: true
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      pages: write
-      id-token: write
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.site.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+      - id: site
+        uses: prisant-labs/repo-pages@v1

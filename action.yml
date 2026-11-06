@@ -1,0 +1,75 @@
+# Publishes the calling repository as a repo-pages site on GitHub Pages.
+# The viewer and generator come from this action, so adopters copy nothing.
+#
+# The inner actions are pinned to commit SHAs, because adopters inherit whatever this
+# file runs. Composite actions cannot set permissions or an environment, so the calling
+# job must carry them. templates/repo-pages.yml shows the whole workflow.
+name: Repo Pages
+description: Publish a repository as a static website where every file is readable, with history from git.
+author: Prisant Labs
+branding:
+  icon: book-open
+  color: blue
+
+inputs:
+  deploy:
+    description: Set to "false" to build without publishing, for example on pull requests.
+    default: 'true'
+  allow-private-repository:
+    description: Set to "true" to publish from a private repository. The site can still be public on the internet.
+    default: 'false'
+  token:
+    description: The token for the repository checks, checkout and deployment.
+    default: ${{ github.token }}
+
+outputs:
+  page_url:
+    description: The URL of the published site.
+    value: ${{ steps.deploy.outputs.page_url }}
+  site_path:
+    description: The folder that holds the built site.
+    value: ${{ steps.build.outputs.site_path }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check that this repository can publish
+      if: inputs.deploy == 'true'
+      shell: bash
+      env:
+        REPO_PAGES_TOKEN: ${{ inputs.token }}
+        REPO_PAGES_ALLOW_PRIVATE: ${{ inputs.allow-private-repository }}
+      run: python3 "$GITHUB_ACTION_PATH/generator/preflight.py"
+
+    - name: Check out the repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        # The site reads authors and dates from git. A shallow clone gives
+        # every file the same author and date.
+        fetch-depth: 0
+        persist-credentials: false
+        token: ${{ inputs.token }}
+
+    - name: Build the site
+      id: build
+      shell: bash
+      run: |
+        site="$RUNNER_TEMP/repo-pages-site"
+        python3 "$GITHUB_ACTION_PATH/generator/build_site.py" --viewer "$GITHUB_ACTION_PATH/viewer" --out "$site"
+        echo "site_path=$site" >> "$GITHUB_OUTPUT"
+
+    - name: Upload the site
+      if: inputs.deploy == 'true'
+      uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+      with:
+        path: ${{ steps.build.outputs.site_path }}
+        # The generator already decides which hidden files to publish, through
+        # includeHidden in the config. Without this line, they would be dropped here.
+        include-hidden-files: true
+
+    - name: Deploy to GitHub Pages
+      id: deploy
+      if: inputs.deploy == 'true'
+      uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
+      with:
+        token: ${{ inputs.token }}

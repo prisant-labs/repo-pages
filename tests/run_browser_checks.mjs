@@ -18,6 +18,9 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const CHECKS = join(HERE, "browser_checks.js");
 const DOC_ROUTE = "#/p/handbook/policies/tps-reports.md";
 const target = process.argv[2] || "_site";
+// Any built site works, given the route of one of its Markdown files as the second argument.
+const route = process.argv[3] || DOC_ROUTE;
+const docName = route.split("/").pop();
 const isUrl = /^https?:\/\//.test(target);
 
 function serve(folder) {
@@ -46,9 +49,9 @@ try {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const pageErrors = [];
   page.on("pageerror", e => pageErrors.push(e.message));
-  await page.goto(base + DOC_ROUTE);
+  await page.goto(base + route);
   await page.waitForSelector("#settingsBtn");
-  await page.waitForFunction(() => document.title.includes("tps-reports"), null, { timeout: 15000 });
+  await page.waitForFunction(name => document.title.includes(name), docName, { timeout: 15000 });
   await page.addScriptTag({ path: CHECKS });
   const raw = await page.evaluate(() => window.rpChecksResult);
   const result = JSON.parse(raw);

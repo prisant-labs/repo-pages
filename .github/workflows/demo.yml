@@ -16,6 +16,7 @@ on:
       - 'generator/**'
       - 'examples/**'
       - 'tests/**'
+      - 'action.yml'
       - '.github/workflows/demo.yml'
   pull_request:
   workflow_dispatch:
@@ -34,6 +35,22 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@v7
+
+      - name: Build this repository with the action
+        id: action
+        uses: ./
+        with:
+          deploy: 'false'
+
+      - name: Check what the action built
+        env:
+          SITE: ${{ steps.action.outputs.site_path }}
+        run: |
+          test -f "$SITE/index.html"
+          test -f "$SITE/site-data.json"
+          test -f "$SITE/README.md"
+          test -d "$SITE/_viewer/vendor"
+          test ! -e "$SITE/.github"
 
       - name: Set up Python
         uses: actions/setup-python@v6

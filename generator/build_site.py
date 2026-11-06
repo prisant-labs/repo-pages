@@ -27,21 +27,22 @@
 Build the repo-pages site for GitHub Pages.
 
 Copies every published tracked file into the output folder at its own path,
-adds the viewer from .github/site/, and writes site-data.json with each
-file's size, last change and first add (from one `git log` pass), Markdown
-front matter, and a map of renamed paths.
+adds the viewer, and writes site-data.json with each file's size, last change
+and first add (from one `git log` pass), Markdown front matter, and a map of
+renamed paths. The viewer comes from --viewer, or from .github/site/ without it.
 
 Uses only the Python standard library. Needs the full git history: in
 GitHub Actions, check out with fetch-depth: 0.
 
-Local usage:
-    python3 .github/scripts/build_site.py --out _site
+Local usage, from the repository you want to publish:
+    python3 path/to/repo-pages/generator/build_site.py --viewer path/to/repo-pages/viewer --out _site
     python3 -m http.server 8000 --directory _site
 """
 
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
 import re
@@ -53,7 +54,7 @@ from pathlib import Path
 
 
 SITE_DIR = Path(".github/site")
-CONFIG_FILE = SITE_DIR / "config.json"
+CONFIG_FILES = [Path(".github/repo-pages.json"), SITE_DIR / "config.json"]
 VIEWER_DIR = "_viewer"
 DATA_FILE = "site-data.json"
 RESERVED = {"index.html", DATA_FILE}
@@ -261,20 +262,32 @@ def run_url() -> str:
 
 
 def load_config(repo: Path) -> dict:
-    path = repo / CONFIG_FILE
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    for name in CONFIG_FILES:
+        path = repo / name
+        if path.exists():
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as error:
+                raise SystemExit(f"{name.as_posix()} is not valid JSON: {error}")
+    return {}
 
 
 # ── Build ──
 
 
-def build(repo: Path, out: Path) -> dict:
+def build(repo: Path, out: Path, viewer: Path | None = None) -> dict:
+    viewer = viewer or repo / SITE_DIR
+    if not (viewer / "index.html").exists():
+        raise SystemExit(f"No viewer found: {viewer / 'index.html'} does not exist.")
     cfg = load_config(repo)
     exclude = [glob_to_regex(p) for p in DEFAULT_EXCLUDE + cfg.get("exclude", [])]
     files = sorted(p for p in tracked_files(repo) if is_published(p, exclude, cfg.get("includeHidden", False)))
     clash = [p for p in files if p in RESERVED or p.startswith(VIEWER_DIR + "/")]
     if clash:
-        raise SystemExit(f"These files collide with the viewer's own paths: {', '.join(clash)}")
+        raise SystemExit(
+            f"These files collide with the viewer's own paths: {', '.join(clash)}. "
+            "Add them to exclude in .github/repo-pages.json, or rename them."
+        )
 
     commits = read_log(repo)
     last, added, renames = history(files, commits)
@@ -324,25 +337,49 @@ def build(repo: Path, out: Path) -> dict:
         dest = out / p
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(repo / p, dest)
-    shutil.copy2(repo / SITE_DIR / "index.html", out / "index.html")
-    vendor = repo / SITE_DIR / "vendor"
+    shutil.copy2(viewer / "index.html", out / "index.html")
+    vendor = viewer / "vendor"
     if vendor.is_dir():
         shutil.copytree(vendor, out / VIEWER_DIR / "vendor")
     (out / DATA_FILE).write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     return data
 
 
+def summary(data: dict, limit: int = 1000) -> str:
+    """Markdown for the workflow run's summary page, so a reader can check what went public."""
+    paths = [f["path"] for f in data["files"]]
+    folders: dict[str, int] = {}
+    for p in paths:
+        top = p.split("/")[0] + "/" if "/" in p else "(top level)"
+        folders[top] = folders.get(top, 0) + 1
+    lines = [f"### Repo Pages published {len(paths)} files", "", "| Folder | Files |", "|---|---|"]
+    lines += [f"| {html.escape(name)} | {count} |" for name, count in sorted(folders.items())]
+    authors = sorted({c[2] for c in data["commits"]})
+    lines += ["", f"The site also shows commit subjects, and these author names: {html.escape(', '.join(authors))}."]
+    lines += ["", "<details><summary>Every published file</summary>", "", "<pre>"]
+    lines += [html.escape(p) for p in paths[:limit]]
+    if len(paths) > limit:
+        lines.append(f"... and {len(paths) - limit} more")
+    lines += ["</pre>", "", "</details>", ""]
+    return "\n".join(lines)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("--repo", default=".", help="repository root (default: current folder)")
     parser.add_argument("--out", default="_site", help="output folder, replaced on each run (default: _site)")
+    parser.add_argument("--viewer", help="folder holding the viewer (default: .github/site in the repository)")
     args = parser.parse_args(argv)
-    data = build(Path(args.repo), Path(args.out))
+    data = build(Path(args.repo), Path(args.out), Path(args.viewer) if args.viewer else None)
     print(
         f"Built {len(data['files'])} files, {len(data['commits'])} commits, "
         f"{len(data['renames'])} renames into {args.out}/",
         file=sys.stderr,
     )
+    step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if step_summary:
+        with open(step_summary, "a", encoding="utf-8") as handle:
+            handle.write(summary(data))
     return 0
 
 
