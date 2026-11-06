@@ -10,7 +10,7 @@ The viewer ships two vendored libraries and uses icon shapes from a third projec
 
 ## marked and DOMPurify
 
-Their full license texts sit beside the code in `viewer/vendor/`, so they travel with a copied viewer. Each is byte for byte from the package's npm tarball.
+Their full license texts sit beside the code in `viewer/vendor/`, so they travel with the viewer into every built site. Each is byte for byte from the package's npm tarball.
 
 | Library | License text |
 |---|---|

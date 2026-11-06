@@ -8,11 +8,12 @@ repo-pages turns a git repository into a static website where every file is read
 
 | Path | What it is |
 |---|---|
+| `action.yml` | The GitHub Action adopters use. Its inner actions are pinned to commit SHAs |
 | `viewer/index.html` | The whole interface, in one file. It is about 140 KB, so search it instead of reading it all |
 | `viewer/vendor/` | Vendored `marked` and DOMPurify. Follow `viewer/vendor/README.md` to update them |
-| `generator/` | `build_site.py` and its tests, using only the Python standard library |
+| `generator/` | `build_site.py`, `preflight.py` and their tests, using only the Python standard library |
 | `tests/vendor-watch/` | A list of vendored versions for Dependabot. Nothing installs it |
-| `templates/repo-pages.yml` | The workflow adopters copy into their own repository |
+| `templates/repo-pages.yml` | The one workflow file adopters add to their repository |
 | `examples/` | The Initech parody sample, its commit script and `build_demo.py` |
 | `tests/` | Browser checks and their runner |
 | `docs/` | Features, settings spec, design notes, architecture and ideas |
@@ -35,6 +36,8 @@ Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedg
 - **Keep the demo honest.** The demo must come from the current viewer and generator. Do not commit the built page, because its dates change on every build.
 - **Treat the demo as public.** Pushes to `main` publish it to <https://projects.prisantlabs.com/repo-pages/>. Anything in the viewer or `examples/` becomes readable by anyone.
 - **Keep the viewer dependency-free.** It has no frontend build step and loads nothing from the network. Add third-party code only with a pinned version, a recorded hash and an entry in `THIRD-PARTY-NOTICES.md`. Keep the MIT and Lucide notice comments at the top of `viewer/index.html`, because built pages must carry them.
+- **Keep the public contract.** The action's inputs and the keys in `.github/repo-pages.json` are public. A change that breaks them needs a new major version.
+- **Pin what adopters inherit.** Keep every `uses:` in `action.yml` on a full commit SHA with a version comment.
 - **Respect the registry.** Add a reader setting through `KEYS` and `PREF_SPEC`, so it gets validation and Reset. Validate everything read from browser storage.
 - **Respect the rejected list.** Do not add anything under "Deliberately left out" in `docs/settings-spec.md` without a new decision.
 - **Check geometry.** The guide line must pass through the chevron center in every indent mode at every Tree text size, and the browser checks test this. `docs/design.md` has the formulas, so keep them in step with the tree CSS.
@@ -49,7 +52,15 @@ Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedg
 | What gets published, or how untrusted files are handled | `SECURITY.md` and the README FAQ |
 | A vendored library | `viewer/vendor/README.md`, `THIRD-PARTY-NOTICES.md` and `tests/vendor-watch/package.json` |
 | Commands or repository rules | This file |
-| The install steps, or an action version in `demo.yml` | `templates/repo-pages.yml`, and the README's Quick start and its agent prompts |
+| The action, its inputs or the config keys | `templates/repo-pages.yml`, `docs/architecture.md`, and the README's Quick start, agent prompt and FAQ |
+
+## Releases
+
+Pushing tags and creating releases needs the maintainer's yes. After the release pull request merges to `main`:
+
+1. Move the "Unreleased" entries in `CHANGELOG.md` to a new version, and update the version in the README badge and status table. Do this in the release pull request.
+2. Tag the squash commit `vX.Y.Z`, and move the major tag `vX` to the same commit. Adopters who use `@vX` get the release on their next rebuild.
+3. Create the GitHub release from `vX.Y.Z`.
 
 ## Sample content
 

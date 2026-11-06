@@ -4,9 +4,9 @@
 
 **A website for any git repository, where every file is readable and the history is one click away. It needs no server and no frontend build.**
 
-repo-pages renders Markdown, runs HTML pages, turns CSV files into sortable tables and highlights code. It builds its folder tree and its New, Updated, Authors and History tabs from your commits. The site rebuilds from git on every push.
+repo-pages renders Markdown, runs HTML pages, turns CSV files into sortable tables and highlights code. It builds its folder tree and its New, Updated, Authors and History tabs from your commits. Publishing takes one small workflow file, and the site rebuilds on every push.
 
-[**Live demo**](https://projects.prisantlabs.com/repo-pages/) &nbsp;·&nbsp; [**What it is**](#-what-this-is) &nbsp;·&nbsp; [**Quick start**](#-quick-start) &nbsp;·&nbsp; [**Agent prompt**](#publish-with-a-coding-agent) &nbsp;·&nbsp; [**FAQ**](#-faq) &nbsp;·&nbsp; [**Docs**](#-documentation)
+[**Live demo**](https://projects.prisantlabs.com/repo-pages/) &nbsp;·&nbsp; [**What it is**](#-what-this-is) &nbsp;·&nbsp; [**Publish yours**](#publish-in-four-commands) &nbsp;·&nbsp; [**Agent prompt**](#publish-with-a-coding-agent) &nbsp;·&nbsp; [**Updates**](#get-updates) &nbsp;·&nbsp; [**FAQ**](#-faq) &nbsp;·&nbsp; [**Docs**](#-documentation)
 
 <p>
   <a href="https://github.com/prisant-labs/repo-pages/issues/new?template=bug_report.yml">Report a Bug</a>
@@ -15,8 +15,9 @@ repo-pages renders Markdown, runs HTML pages, turns CSV files into sortable tabl
 </p>
 
 <p>
-  <img src="https://img.shields.io/badge/status-pre--release-orange?style=flat-square" alt="Status: pre-release">
+  <img src="https://img.shields.io/badge/status-active-success?style=flat-square" alt="Status: Active">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License: MIT"></a>
+  <a href="https://github.com/prisant-labs/repo-pages/releases"><img src="https://img.shields.io/badge/release-v1.0.0-blue?style=flat-square" alt="Latest release v1.0.0"></a>
   <a href="https://projects.prisantlabs.com/repo-pages/"><img src="https://img.shields.io/badge/demo-live-success?style=flat-square" alt="Live demo"></a>
   <a href="https://github.com/prisant-labs/repo-pages/actions/workflows/demo.yml"><img src="https://github.com/prisant-labs/repo-pages/actions/workflows/demo.yml/badge.svg" alt="Demo workflow status"></a>
   <img src="https://img.shields.io/badge/server-none-brightgreen?style=flat-square" alt="Server: none">
@@ -35,7 +36,7 @@ repo-pages renders Markdown, runs HTML pages, turns CSV files into sortable tabl
 
 - [What this is](#-what-this-is)
 - [Quick start](#-quick-start)
-  - [Try the demo](#try-the-demo) · [Publish with a coding agent](#publish-with-a-coding-agent) · [Publish by hand](#publish-by-hand) · [Update your copy](#update-your-copy)
+  - [Try the demo](#try-the-demo) · [Publish in four commands](#publish-in-four-commands) · [Publish with a coding agent](#publish-with-a-coding-agent) · [Configure it](#configure-it) · [Get updates](#get-updates)
 - [What makes it different](#-what-makes-it-different)
 - [What a reader gets](#-what-a-reader-gets)
 - [FAQ](#-faq)
@@ -53,7 +54,7 @@ repo-pages renders Markdown, runs HTML pages, turns CSV files into sortable tabl
 
 ## 📦 What this is
 
-repo-pages has two parts, and neither of them runs on a server:
+repo-pages has two parts, and neither of them runs on a server. A GitHub Action brings them to your repository, so you copy nothing.
 
 - **A viewer:** one static HTML file with two vendored libraries.
 - **A generator:** a Python script, using only the standard library, that reads git history and writes the site.
@@ -107,112 +108,117 @@ python3 -m http.server 8000 --directory _site
 
 Then open `http://localhost:8000`. On Windows, use `python` if `python3` is not found.
 
-### Publish with a coding agent
+### Publish in four commands
 
 > [!WARNING]
-> repo-pages publishes nearly every tracked file, and a GitHub Pages site is public even when its repository is private. The prompt below makes the agent stop and show you what would go public.
+> repo-pages publishes nearly every tracked file, and a GitHub Pages site can be public even when its repository is private. Read the [FAQ](#-faq) first. The action refuses a private repository unless you tell it otherwise.
 
-Paste this prompt into a coding agent that is open in the repository you want to publish:
+Run these in the repository you want to publish. The `gh` command needs the [GitHub CLI](https://cli.github.com), or you can set **Settings > Pages > Source** to **GitHub Actions** instead.
+
+```bash
+mkdir -p .github/workflows
+curl -fsSL https://raw.githubusercontent.com/prisant-labs/repo-pages/v1/templates/repo-pages.yml -o .github/workflows/repo-pages.yml
+gh api -X POST "repos/{owner}/{repo}/pages" -f build_type=workflow
+git add .github/workflows/repo-pages.yml && git commit -m "Publish with repo-pages" && git push
+```
+
+That is the whole install. The [workflow](templates/repo-pages.yml) is one small file, and the viewer and generator come from the action. If your default branch is not `main`, change the branch name in the workflow. Each run's summary page lists every file it published, so you can check what went public.
+
+### Publish with a coding agent
+
+Paste this prompt into a coding agent that is open in the repository you want to publish. It does the same install, and it first reviews what would go public, which a workflow cannot judge.
 
 ```text
-Publish this repository as a repo-pages site on GitHub Pages.
-The project is at https://github.com/prisant-labs/repo-pages.
+Publish this repository as a repo-pages site on GitHub Pages, using the action at
+https://github.com/prisant-labs/repo-pages.
 
 Stop and wait for my answer at each step marked STOP.
 Work on a new branch, and do not push to the default branch.
 
 1. Show me what would go public.
-   - Tell me this repository's visibility. A GitHub Pages site is public on the
-     internet, even when its repository is private.
-   - Run `git ls-files`. repo-pages publishes every tracked file, except
-     `.github/**`, hidden files, symlinks and submodules.
+   - Tell me this repository's visibility. A GitHub Pages site can be public on the
+     internet even when its repository is private, so the action refuses a private
+     repository unless `allow-private-repository` is "true".
+   - Run `git ls-files`. repo-pages publishes every tracked file, except `.github/**`,
+     hidden files, symlinks and submodules.
    - Point out anything that looks like a secret, personal data or a private note.
+   - Point out a top-level `index.html` or `site-data.json`. These collide with the
+     viewer, so they must be excluded or renamed.
    - Remind me that the site shows commit author names and commit subjects.
-   - STOP. Ask me to approve publishing, and to name anything to exclude.
+   - STOP. Ask me to approve publishing, to name anything to exclude, and whether I
+     want a site title.
 
-2. Install repo-pages.
-   - Clone https://github.com/prisant-labs/repo-pages into a temporary folder
-     outside this repository, and note its commit.
-   - Create `.github/site/`, and copy the contents of its `viewer/` folder there.
-   - Copy its `generator/build_site.py` to `.github/scripts/build_site.py`.
-   - Copy its `templates/repo-pages.yml` to `.github/workflows/repo-pages.yml`.
-     If this repository's default branch is not `main`, change the branch there.
-   - Write `.github/site/config.json` with these keys: `title`, `description`,
-     `exclude` (my patterns from step 1), `includeHidden` (false) and
-     `sandboxHtml` (false). If this repository holds HTML I may not fully trust,
-     set `sandboxHtml` to true and tell me.
-   - Add `_site/` to `.gitignore`.
+2. Add the workflow.
+   - Download https://raw.githubusercontent.com/prisant-labs/repo-pages/v1/templates/repo-pages.yml
+     to `.github/workflows/repo-pages.yml`. If this repository's default branch is not
+     `main`, change the branch there.
+   - If I named exclusions or a title, write `.github/repo-pages.json` with the keys
+     `title` and `exclude`. If this repository holds HTML I may not fully trust, add
+     `"sandboxHtml": true` and tell me.
 
-3. Test it.
-   - Make sure this clone has full history. Run `git fetch --unshallow` if it is shallow.
-   - Run `python3 .github/scripts/build_site.py --out _site`. Use `python` if `python3`
-     is not found.
-   - Confirm that every excluded file is absent from `_site/`, and tell me how many
-     files were published.
-   - Serve `_site/` with `python3 -m http.server`, then open it in a browser if you can.
-     Opening `index.html` from disk will not work.
+3. Open a pull request.
 
-4. Open a pull request, and name the repo-pages commit you copied in its description.
-
-5. Turn on GitHub Pages.
+4. Turn on GitHub Pages.
    - STOP. Ask me whether to run this, or whether I will set Settings > Pages > Source
      to "GitHub Actions" myself:
      `gh api -X POST "repos/{owner}/{repo}/pages" -f build_type=workflow`
      If Pages already exists, the same command with `-X PUT` switches its source.
 
-6. STOP. Ask me to merge the pull request. After the merge, confirm that the
-   "Repo Pages" workflow succeeded, and give me the site's URL.
+5. STOP. Ask me to merge the pull request. After the merge, confirm that the
+   "Repo Pages" workflow succeeded, give me the site's URL, and point me to the run's
+   summary page, which lists every published file.
 ```
 
-### Publish by hand
+### Configure it
 
-1. Copy three things from this repository into yours:
+Everything is optional. To change a default, add `.github/repo-pages.json`, which is never published:
 
-   ```bash
-   git clone --depth 1 https://github.com/prisant-labs/repo-pages /tmp/repo-pages
-   mkdir -p .github/site .github/scripts .github/workflows
-   cp -r /tmp/repo-pages/viewer/. .github/site/
-   cp /tmp/repo-pages/generator/build_site.py .github/scripts/build_site.py
-   cp /tmp/repo-pages/templates/repo-pages.yml .github/workflows/repo-pages.yml
-   ```
-
-2. Add `.github/site/config.json`. Every key is optional:
-
-   ```json
-   {
-     "title": "My Docs",
-     "description": "What this site is for.",
-     "exclude": ["drafts/**"],
-     "includeHidden": false,
-     "sandboxHtml": false
-   }
-   ```
-
-3. Build it with full git history, and read through what it published:
-
-   ```bash
-   python3 .github/scripts/build_site.py --out _site
-   python3 -m http.server 8000 --directory _site
-   ```
-
-4. Set **Settings > Pages > Source** to **GitHub Actions**. Then commit and push to your default branch. Do not commit `_site/`.
-
-The [workflow](templates/repo-pages.yml) checks out with `fetch-depth: 0`, because a shallow clone gives every file the same author and date.
-
-### Update your copy
-
-Your repository holds a copy of the viewer and generator, so fixes do not reach it by themselves. To update, repeat the copy steps. Your `config.json` stays, because the viewer folder does not contain one. Delete `.github/site/vendor/` first, so older library versions do not linger. Agents can use this prompt:
-
-```text
-Update repo-pages in this repository from https://github.com/prisant-labs/repo-pages.
-Work on a new branch. Clone that repository into a temporary folder outside this one.
-Delete `.github/site/vendor/`, then copy the contents of its `viewer/` folder to
-`.github/site/`, and keep our `config.json`. Replace `.github/scripts/build_site.py`
-with its `generator/build_site.py`. Compare `.github/workflows/repo-pages.yml` with its
-`templates/repo-pages.yml`, and tell me about any differences. Build with
-`python3 .github/scripts/build_site.py --out _site`, then open a pull request.
-Summarize the relevant entries from its `CHANGELOG.md` in the description.
+```json
+{
+  "title": "My Docs",
+  "description": "What this site is for.",
+  "exclude": ["drafts/**"],
+  "includeHidden": false,
+  "sandboxHtml": false
+}
 ```
+
+The title defaults to the repository's name. The action also takes these inputs:
+
+| Input | Default | What it does |
+|---|---|---|
+| `deploy` | `true` | Set to `false` to build without publishing, for example on pull requests |
+| `allow-private-repository` | `false` | Set to `true` to publish from a private repository |
+| `token` | `github.token` | The token for the repository checks, checkout and deployment |
+
+To preview a site on your own machine, build it from a clone of this repository, and do not commit `_site/`:
+
+```bash
+git clone --depth 1 https://github.com/prisant-labs/repo-pages /tmp/repo-pages
+python3 /tmp/repo-pages/generator/build_site.py --viewer /tmp/repo-pages/viewer --out _site
+python3 -m http.server 8000 --directory _site
+```
+
+### Get updates
+
+A site picks up a new version when it rebuilds. Choose how much control you want:
+
+- **Follow `@v1` (the default).** Each rebuild uses the latest `v1` release, so fixes arrive by themselves. A quiet repository rebuilds rarely, so the workflow has a weekly `schedule` line you can uncomment.
+- **Pin a commit.** Reference a full commit SHA, and add a version comment on the same line. Nothing changes until you accept it. [Dependabot](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/keeping-your-actions-up-to-date-with-dependabot) can open a pull request for each release:
+
+  ```yaml
+  # .github/dependabot.yml
+  version: 2
+  updates:
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+        interval: weekly
+  ```
+
+- **Run your own fork.** Point `uses:` at your fork, and merge from this repository when you choose.
+
+The viewer and generator always ship together, so they cannot get out of step. The action's inputs and the keys in `repo-pages.json` are the public contract. Anything that breaks them gets a new major version, `v2`, which you opt into.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -222,7 +228,9 @@ Summarize the relevant entries from its `CHANGELOG.md` in the description.
 
 - **It shows the repository, not a curated subset.** A CSV opens as a table beside the Markdown that explains it, and an HTML page runs beside its notes.
 - **History is part of the interface.** The New, Updated, Authors and History tabs come straight from commits, so they need no front matter or upkeep.
-- **There is nothing to host.** The output is static files. The generator needs only Python and git, and the viewer loads nothing from the network.
+- **There is nothing to host or copy.** The output is static files, and the viewer loads nothing from the network. Your repository holds one workflow file.
+- **Fixes reach you.** A site that follows `@v1` picks up each release on its next rebuild, and a pinned site can take them as pull requests.
+- **It checks before it publishes.** The action refuses a private repository by default, and it names the exact setting when something is missing.
 - **The demo cannot drift.** Each build uses the viewer and generator from the same commit. It publishes only if the tests and 64 browser checks pass.
 - **Untrusted content is treated as data.** Rendered Markdown passes through DOMPurify, and `sandboxHtml` isolates HTML pages you do not fully trust. [SECURITY.md](SECURITY.md) has the details.
 
@@ -270,7 +278,13 @@ Summarize the relevant entries from its `CHANGELOG.md` in the description.
 
 **Are reader settings shared between readers?** No. They live in each reader's browser storage. If storage is blocked, the defaults apply.
 
-**How do I get fixes, including security fixes?** Repeat the copy steps in [Update your copy](#update-your-copy). Your site does not update by itself, and the project has no versioned releases yet.
+**How do I get fixes, including security fixes?** A workflow that uses `@v1` picks them up on its next rebuild. A workflow pinned to a commit needs that pin updated. [Get updates](#get-updates) compares the options.
+
+**Can I publish from a private repository?** Only if your GitHub plan allows it, and you set `allow-private-repository` to `true`. The action refuses by default, because the site can be public even so.
+
+**What can make the workflow fail?** The action's error names the fix in three cases. GitHub Pages is off or set to a branch, the job lacks `id-token: write`, or the repository is private. A missing `pages: write` fails at deployment, and GitHub's message names it. A top-level `index.html` or `site-data.json` collides with the viewer, so exclude or rename it.
+
+**Which runners does it support?** It is tested on `ubuntu-latest`. It needs `python3` 3.10 or later and `bash` on the runner.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -281,7 +295,8 @@ Summarize the relevant entries from its `CHANGELOG.md` in the description.
 | If you want to... | Start here |
 |---|---|
 | See it working | The [live demo](https://projects.prisantlabs.com/repo-pages/) |
-| Publish your repository | [Publish with a coding agent](#publish-with-a-coding-agent) or [by hand](#publish-by-hand) |
+| Publish your repository | [Four commands](#publish-in-four-commands) or [a coding agent](#publish-with-a-coding-agent) |
+| Control how updates arrive | [Get updates](#get-updates) |
 | Decide whether a site is safe to publish | The [FAQ](#-faq) and [SECURITY.md](SECURITY.md) |
 | Know every setting a reader can change | [docs/settings-spec.md](docs/settings-spec.md) |
 | Understand how the parts fit together | [docs/architecture.md](docs/architecture.md) |
@@ -312,13 +327,14 @@ Summarize the relevant entries from its `CHANGELOG.md` in the description.
 
 ## 📊 Project status
 
-**Pre-release.** The viewer and generator work today, and they run the live demo. The project has no versioned releases yet, so changes land on `main`. Full history is in [`CHANGELOG.md`](CHANGELOG.md).
+**Active.** The action, viewer and generator are at v1, and they run the live demo. Full history is in [`CHANGELOG.md`](CHANGELOG.md).
 
 ### At a glance
 
 |  |  |
 |---|---|
-| **Latest release** | None yet |
+| **Latest release** | [v1.0.0](https://github.com/prisant-labs/repo-pages/releases/tag/v1.0.0) |
+| **Install** | One workflow file, using `prisant-labs/repo-pages@v1` |
 | **Live demo** | [projects.prisantlabs.com/repo-pages](https://projects.prisantlabs.com/repo-pages/), rebuilt from `main` |
 | **Viewer** | One HTML file, plus `marked` and DOMPurify at pinned versions |
 | **Generator** | One Python script, using only the standard library |
@@ -330,9 +346,10 @@ Summarize the relevant entries from its `CHANGELOG.md` in the description.
 
 ```
 repo-pages/
+├── action.yml             # the GitHub Action
 ├── viewer/                # the whole interface, in one HTML file
 │   └── vendor/            #   pinned copies of marked and DOMPurify
-├── generator/             # build_site.py and its tests
+├── generator/             # build_site.py, preflight.py and their tests
 ├── templates/             # the workflow to copy into your repository
 ├── examples/              # the Initech sample and the demo build
 ├── tests/                 # browser checks, their runner, and the vendor watch list
@@ -347,7 +364,7 @@ repo-pages/
 
 ### Changelog
 
-Full detail is in [`CHANGELOG.md`](CHANGELOG.md). Changes collect under "Unreleased" until the first versioned release.
+Full detail is in [`CHANGELOG.md`](CHANGELOG.md), and each version is on the [releases page](https://github.com/prisant-labs/repo-pages/releases).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
