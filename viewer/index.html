@@ -66,7 +66,7 @@
     --content-max-width: 1100px;
     --md-max-width: 1600px; /* Markdown width at Normal; Narrow and Full are in the doc footer */
     --md-text-scale: 1; /* Markdown text size; the doc footer's A- and A+ set it */
-    --tree-indent: 1.55rem; /* Tree nesting per level; the Settings modal sets it */
+    --tree-indent: 1rem; /* Tree nesting per level; the Settings modal sets it */
     --tree-row-px: max(0px, min(0.85rem, var(--tree-indent) - 6.5px * var(--tree-scale))); /* Row left padding: shrinks so a narrow indent still holds the chevron's center */
     --tree-line-x: calc(var(--tree-row-px) + 6.5px * var(--tree-scale)); /* Guide-line x: row padding + half the scaled chevron, in every indent mode */
     --ui-scale: 1; /* Interface text size (panels, header, menus, doc footer); the Settings modal sets it */
@@ -83,7 +83,7 @@
     --t-md: #2563eb; --t-html: #ea580c; --t-data: #059669; --t-code: #7c3aed; --t-media: #db2777; --t-other: #6b7280;
     --tok-kw: #7c3aed; --tok-str: #047857; --tok-com: #9ca3af; --tok-num: #c2410c;
     --scroll-thumb: rgba(0,0,0,0.2); --scroll-thumb-hover: rgba(0,0,0,0.38);
-    --zebra: rgba(0,0,0,0.022); --zebra-strong: rgba(0,0,0,0.045);
+    --zebra: rgba(0,0,0,0.022); --zebra-strong: rgba(0,0,0,0.045); --tree-line: #a0a5ab;
     color-scheme: light;
   }
   [data-theme="dark"] {
@@ -96,7 +96,7 @@
     --t-md: #60a5fa; --t-html: #fb923c; --t-data: #34d399; --t-code: #a78bfa; --t-media: #f472b6; --t-other: #9ca3af;
     --tok-kw: #c4b5fd; --tok-str: #6ee7b7; --tok-com: #6b7280; --tok-num: #fdba74;
     --scroll-thumb: rgba(255,255,255,0.16); --scroll-thumb-hover: rgba(255,255,255,0.32);
-    --zebra: rgba(255,255,255,0.022); --zebra-strong: rgba(255,255,255,0.045);
+    --zebra: rgba(255,255,255,0.022); --zebra-strong: rgba(255,255,255,0.045); --tree-line: #585858;
     color-scheme: dark;
   }
   @media (prefers-color-scheme: dark) {
@@ -110,7 +110,7 @@
       --t-md: #60a5fa; --t-html: #fb923c; --t-data: #34d399; --t-code: #a78bfa; --t-media: #f472b6; --t-other: #9ca3af;
       --tok-kw: #c4b5fd; --tok-str: #6ee7b7; --tok-com: #6b7280; --tok-num: #fdba74;
       --scroll-thumb: rgba(255,255,255,0.16); --scroll-thumb-hover: rgba(255,255,255,0.32);
-      --zebra: rgba(255,255,255,0.022); --zebra-strong: rgba(255,255,255,0.045);
+      --zebra: rgba(255,255,255,0.022); --zebra-strong: rgba(255,255,255,0.045); --tree-line: #585858;
       color-scheme: dark;
     }
   }
@@ -194,12 +194,11 @@
   .nav-footer .build-stamp a { color: var(--text-muted); }
 
   /* Tree. Nesting and guide lines follow the Settings modal (--tree-indent, --tree-line-x, --tree-scale).
-     Files start where folder names start: row padding + chevron + gap, plus the folder icon when icons are on. */
-  .nav-panel { --tree-chev: calc(13px * var(--tree-scale)); --tree-icon-w: 0px; }
-  .nav-panel.folder-icons { --tree-icon-w: calc(15px * var(--tree-scale) + 0.35rem); }
+     A file's badge takes the column right after a folder's chevron, which holds the folder icon when icons are on. */
+  .nav-panel { --tree-chev: calc(13px * var(--tree-scale)); }
   .tree-folder, .tree-file { position: relative; display: flex; align-items: center; padding: var(--tree-row-py) 0.85rem var(--tree-row-py) var(--tree-row-px); cursor: pointer; border-radius: 4px; user-select: none; white-space: nowrap; }
   .tree-folder { font-size: calc(0.78rem * var(--tree-scale)); font-weight: 600; }
-  .tree-file { font-size: calc(0.74rem * var(--tree-scale)); color: var(--text); gap: 0.35rem; padding-left: calc(var(--tree-row-px) + var(--tree-chev) + 0.3rem + var(--tree-icon-w)); }
+  .tree-file { font-size: calc(0.74rem * var(--tree-scale)); color: var(--text); gap: 0.35rem; padding-left: calc(var(--tree-row-px) + var(--tree-chev) + 0.3rem); }
   .wrap-names .tree-folder, .wrap-names .tree-file { white-space: normal; }
   .wrap-names .tree-name { overflow-wrap: anywhere; min-width: 7em; } /* deep rows keep a readable column and scroll sideways, as unwrapped rows do */
   /* Alternating rows: renderSidebar marks every other visible row .z-odd. The stripe is its own layer behind the row,
@@ -209,7 +208,7 @@
   .zebra.zebra-full .z-odd::before { left: -400px; right: -0.4rem; border-radius: 0; }
   .nav-view .tree-folder:hover, .nav-view .tree-file:hover, .nav-view .recent-item:hover { background: var(--hover); }
   .nav-view .tree-file.active, .nav-view .tree-folder.active { background: var(--hover-accent); color: var(--accent); }
-  .tree-children { margin-left: var(--tree-line-x); padding-left: max(0px, calc(var(--tree-indent) - var(--tree-line-x))); border-left: 1px solid var(--nav-border); }
+  .tree-children { margin-left: var(--tree-line-x); padding-left: max(0px, calc(var(--tree-indent) - var(--tree-line-x))); border-left: 1px solid var(--tree-line); }
   .no-guide-lines .tree-children { border-left-color: transparent; }
   .tree-children.closed { display: none; }
   .chev { width: 13px; height: 13px; margin-right: 0.3rem; fill: var(--text-muted); transition: transform 0.15s; flex-shrink: 0; }
@@ -306,11 +305,6 @@
   .settings-toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
   .settings-toggle.on::after { left: 16px; }
   .settings-modal-footer { display: flex; justify-content: flex-end; padding: 0.45rem 0.75rem; border-top: 1px solid var(--nav-border); flex-shrink: 0; }
-  .settings-stepper { display: flex; align-items: center; gap: 0.3rem; }
-  .settings-stepper button { min-width: 30px; height: 24px; border: 1px solid var(--nav-border); border-radius: 5px; background: var(--surface); color: var(--text-muted); cursor: pointer; font-size: calc(0.66rem * var(--ui-scale)); font-weight: 600; }
-  .settings-stepper button:hover:not(:disabled) { border-color: var(--text-muted); color: var(--text); }
-  .settings-stepper button:disabled { opacity: 0.4; cursor: default; }
-  .settings-stepper .settings-value { flex: 1; text-align: center; font-weight: 600; color: var(--text); }
   .settings-reset { font-size: calc(0.62rem * var(--ui-scale)); font-weight: 500; color: var(--text-muted); background: none; border: none; cursor: pointer; }
   .settings-reset:hover { color: var(--accent); }
 
@@ -664,7 +658,7 @@ const PREF_SPEC = { // name: [storage key, validator, default]
   theme: [KEYS.theme, oneOf(["light", "dark", "system"]), "system"],
   uiScale: [KEYS.uiScale, oneOf(TEXT_SIZES), 1], treeScale: [KEYS.treeScale, oneOf(TEXT_SIZES), 1],
   indent: [KEYS.indent, oneOf(["compact", "default", "custom"]), "default"],
-  indentCustom: [KEYS.indentCustom, v => typeof v === "number" && isFinite(v) && v >= 0.5 && v <= 4.0, 2.0],
+  indentCustom: [KEYS.indentCustom, v => typeof v === "number" && isFinite(v) && v >= 0.5 && v <= 4.0, 1.25],
   density: [KEYS.density, oneOf(["compact", "default", "comfortable"]), "default"],
   sort: [KEYS.sort, oneOf(["name", "updated"]), "name"],
   guideLines: [KEYS.guideLines, isBool, true],
@@ -1256,7 +1250,7 @@ async function renderFile(f, body, token) {
 }
 
 /* ───────────── Markdown reader controls (Text, Width, Doc theme) ───────────── */
-const MD_TEXT_STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.35, 1.5];
+const MD_TEXT_STEPS = [0.8, 1, 1.2, 1.5]; // S, M, L, XL; wider than the interface sizes, because reading text needs more range
 const MD_WIDTHS = ["narrow", "normal", "full"];
 const MD_THEMES = ["match", "light", "dark"];
 let mdTextScale = load(KEYS.mdTextScale, v => MD_TEXT_STEPS.includes(v), 1);
@@ -1376,7 +1370,7 @@ function trackToc(body) {
 })();
 
 /* ───────────── Settings modal (the gear in the nav footer) ───────────── */
-const INDENT_LEVELS = { compact: "1.0rem", default: "1.55rem" }; // the CSS derives the guide line from the indent
+const INDENT_LEVELS = { compact: "0.7rem", default: "1rem" }; // the CSS derives the guide line from the indent
 const ROW_PADDING = { compact: "0.1rem", default: "0.22rem", comfortable: "0.36rem" };
 function applyTheme() {
   if (PREFS.theme === "system") document.documentElement.removeAttribute("data-theme");
@@ -1402,9 +1396,11 @@ applyTheme(); applyPrefs();
 
 const settingsBackdrop = $("#settingsBackdrop"), settingsBtn = $("#settingsBtn"), settingsBody = $("#settingsBody");
 const settingPct = v => Math.round(v * 100) + "%";
-const SIZE_CHOICES = TEXT_SIZES.map((v, i) => [v, ["S", "M", "L", "XL"][i], settingPct(v)]);
+const sizeChoices = sizes => sizes.map((v, i) => [v, ["S", "M", "L", "XL"][i], settingPct(v)]);
+const SIZE_CHOICES = sizeChoices(TEXT_SIZES);
 // The document preferences belong to the doc footer; these rows read and write the same values.
 const DOC_PREFS = {
+  mdTextScale: { get: () => mdTextScale, set: v => { mdTextScale = v; save(KEYS.mdTextScale, v); } },
   mdWidth: { get: () => mdWidth, set: v => { mdWidth = v; save(KEYS.mdWidth, v); } },
   mdTheme: { get: () => mdDocTheme, set: v => { mdDocTheme = v; save(KEYS.mdTheme, v); } }
 };
@@ -1422,7 +1418,6 @@ const settingToggle = (k, label, hint) => `<div class="settings-toggle-row"><spa
 const settingSub = rows => `<div class="settings-sub">${rows}</div>`;
 
 function renderSettings() {
-  const step = MD_TEXT_STEPS.indexOf(mdTextScale);
   settingsBody.innerHTML = `
     <div class="settings-modal-section">Appearance</div>
     ${settingRow("Theme", settingSeg("theme", [["light", "Light"], ["dark", "Dark"], ["system", "System"]]), { hint: "System follows your computer. The button beside the build stamp switches between light and dark." })}
@@ -1445,7 +1440,7 @@ function renderSettings() {
     ${settingRow("Start on tab", settingSeg("defaultTab", [["folders", "Folders"], ["added", "New"], ["updated", "Updated"], ["authors", "Authors"], ["history", "History"]]), { hint: "The tab the panel opens on when you load the site." })}
     ${settingRow("New and Updated show", settingSeg("recentDays", [[0, "Latest"], [7, "7d", "The last 7 days"], [30, "30d", "The last 30 days"], [90, "90d", "The last 90 days"]]), { hint: "Latest is the last 40 commits. 7d is the last 7 days." })}
     <div class="settings-modal-section">Documents</div>
-    ${settingRow("Text", `<div class="settings-stepper"><button data-mdstep="-1" aria-label="Smaller document text"${step === 0 ? " disabled" : ""}>A&minus;</button><span class="settings-value">${settingPct(mdTextScale)}</span><button data-mdstep="1" aria-label="Larger document text"${step === MD_TEXT_STEPS.length - 1 ? " disabled" : ""}>A+</button></div>`)}
+    ${settingRow("Text size", settingSeg("mdTextScale", sizeChoices(MD_TEXT_STEPS)), { value: settingPct(mdTextScale) })}
     ${settingRow("Width", settingSeg("mdWidth", [["narrow", "Narrow"], ["normal", "Normal"], ["full", "Full"]]))}
     ${settingRow("Doc theme", settingSeg("mdTheme", [["match", "Match"], ["light", "Light"], ["dark", "Dark"]]), { hint: "The same settings as the doc footer." })}`;
 }
@@ -1475,13 +1470,9 @@ settingsBackdrop.onclick = e => { if (e.target === settingsBackdrop) closeSettin
 $("#settingsClose").onclick = closeSettings;
 document.addEventListener("keydown", e => { if (e.key === "Escape" && settingsBackdrop.classList.contains("open")) { e.stopImmediatePropagation(); closeSettings(); settingsBtn.focus(); } });
 settingsBody.addEventListener("click", e => {
-  const b = e.target.closest("[data-pref], [data-toggle], [data-mdstep]"); if (!b) return;
+  const b = e.target.closest("[data-pref], [data-toggle]"); if (!b) return;
   if (b.dataset.toggle) {
     const k = b.dataset.toggle; PREFS[k] = !PREFS[k]; savePref(k); applyPrefs(); refreshSettings(`[data-toggle="${k}"]`);
-  } else if (b.dataset.mdstep) {
-    const next = MD_TEXT_STEPS[MD_TEXT_STEPS.indexOf(mdTextScale) + Number(b.dataset.mdstep)];
-    if (next !== undefined) changeDocPref(() => { mdTextScale = next; save(KEYS.mdTextScale, next); });
-    refreshSettings(`[data-mdstep="${b.dataset.mdstep}"]:not(:disabled)`);
   } else {
     const k = b.dataset.pref, v = SETTING_CHOICES[k].find(([val]) => String(val) === b.dataset.val)[0];
     if (DOC_PREFS[k]) changeDocPref(() => DOC_PREFS[k].set(v));

@@ -39,7 +39,7 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 | Appearance | Theme (Light, Dark or System), Interface text |
 | Tree | Tree text, Folder indentation, Row density, Sort, Vertical guide lines, Alternating row colors, Folder icons, File type badges, Item counts on folders, Wrap long names, Reveal the open file |
 | Lists | Start on tab, New and Updated show |
-| Documents | Text, Width, Doc theme |
+| Documents | Text size, Width, Doc theme |
 
 ### Build
 
