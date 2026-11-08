@@ -4,6 +4,15 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Changed
+
+- **The folder tree is tighter.** Default indentation is now `1rem` per level, down from `1.55rem`, and Compact is `0.7rem`, down from `1rem`. A file's type badge now sits in the same column as a folder icon, so turning on folder icons no longer pushes files to the right.
+- **Document text size uses S, M, L and XL.** The Documents row in the settings is now labeled "Text size" and matches the other two text sizes. The sizes are 80%, 100%, 120% and 150%, and the doc footer's A− and A+ step through the same four. A saved size of 90%, 110% or 135% goes back to 100%.
+
+### Fixed
+
+- **Vertical guide lines are now visible.** They were drawn in the panel's border color, at about 1.2:1 contrast, which made the setting look broken. They now have their own color, at more than 2:1 in both themes.
+
 ## [1.0.1] - 2026-11-06
 
 ### Changed

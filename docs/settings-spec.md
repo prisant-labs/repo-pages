@@ -26,7 +26,7 @@ Defaults are in bold. Every key uses the `rp.` prefix.
 | Appearance | Interface text | 4 options | S 90%, **M 100%**, L 110%, XL 125% | `rp.ui.scale` |
 | Tree | Tree text | 4 options | S 90%, **M 100%**, L 110%, XL 125% | `rp.tree.scale` |
 | Tree | Folder indentation | 3 options | Compact, **Default**, Custom | `rp.tree.indent` |
-| Tree | Custom indentation | Number, shown for Custom | 0.5 to 4.0 rem, **2.0** | `rp.tree.indentCustom` |
+| Tree | Custom indentation | Number, shown for Custom | 0.5 to 4.0 rem, **1.25** | `rp.tree.indentCustom` |
 | Tree | Row density | 3 options | Compact, **Default**, Comfortable | `rp.tree.density` |
 | Tree | Sort | 2 options | **Name**, Recently updated | `rp.tree.sort` |
 | Tree | Vertical guide lines | Toggle | **On**, Off | `rp.tree.guideLines` |
@@ -42,14 +42,14 @@ Defaults are in bold. Every key uses the `rp.` prefix.
 | Tree | Reveal the open file | Toggle | **On**, Off | `rp.tree.reveal` |
 | Lists | Start on tab | 5 options | **Folders**, New, Updated, Authors, History | `rp.nav.defaultTab` |
 | Lists | New and Updated show | 4 options | **Latest**, 7d, 30d, 90d | `rp.nav.recentDays` |
-| Documents | Text | Stepper | 80, 90, **100**, 110, 120, 135, 150% | `rp.md.textScale` |
+| Documents | Text size | 4 options | S 80%, **M 100%**, L 120%, XL 150% | `rp.md.textScale` |
 | Documents | Width | 3 options | Narrow, **Normal**, Full | `rp.md.width` |
 | Documents | Doc theme | 3 options | **Match**, Light, Dark | `rp.md.theme` |
 
 ## Storage
 
 - `rp.theme` stores `"light"`, `"dark"` or `"system"`. The script in `<head>` that applies the theme before first paint accepts only `"light"` and `"dark"`, so `"system"` sets no theme attribute and the CSS follows the operating system.
-- Values are stored as JSON. `rp.nav.recentDays` holds a number (`0`, `7`, `30` or `90`), and `0` means Latest. The two text scales hold `0.9`, `1`, `1.1` or `1.25`.
+- Values are stored as JSON. `rp.nav.recentDays` holds a number (`0`, `7`, `30` or `90`), and `0` means Latest. The Interface and Tree text scales hold `0.9`, `1`, `1.1` or `1.25`. The document text scale holds `0.8`, `1`, `1.2` or `1.5`.
 - Each setting has one registry entry with its storage key, validator and default. Reset reads its defaults from that registry, so a new setting is reset without extra code.
 - A stored value that fails its validator gives the default. This includes values from an earlier design, such as an icon color of `"amber"`.
 
@@ -114,8 +114,8 @@ The indent per nesting level drives the tree. The vertical guide line sits at th
 
 | Option | Indent per level |
 |---|---|
-| Compact | `1.0rem` |
-| Default | `1.55rem` |
+| Compact | `0.7rem` |
+| Default | `1rem` |
 | Custom | The entered value, in `rem` |
 
 A row's left padding is `0.85rem`, unless the indent is too small to hold it. Then the padding shrinks so that the chevron's center lands on the indent. [design.md](design.md#tree-geometry) has the formula.
@@ -140,7 +140,7 @@ Row density sets the vertical padding of tree rows: Compact `0.1rem`, Default `0
 
 ### Vertical guide lines
 
-Full-row stripes paint behind the lines, so the lines stay visible on striped rows.
+The lines have their own color, because the shared border color is too faint to read as a line. They keep at least 2:1 contrast against the panel in both themes, including on striped rows. Full-row stripes paint behind the lines.
 
 ### Alternating row colors
 
@@ -156,7 +156,7 @@ Every second visible row gets a stripe, counted from the top of the list after e
 
 ### Folder icons
 
-An icon sits between the chevron and the folder name, and it switches between closed and open with the folder. The chevron stays. File rows shift right by the icon's width plus its gap, so badges still start where sibling folder names start.
+An icon sits between the chevron and the folder name, and it switches between closed and open with the folder. The chevron stays. File rows do not move, because a file's badge already sits in the same column as the folder icon.
 
 Icons apply to tree rows only. Breadcrumb menus and folder pages keep their own folder icon.
 
@@ -201,7 +201,7 @@ A footer at the bottom of every rendered Markdown document has three groups, sep
 
 | Group | Controls | Values | Default | Where it applies |
 |---|---|---|---|---|
-| **Text** | A−, the current percent, A+ | 80, 90, 100, 110, 120, 135, 150% | 100% | Full-page documents and the notes panels |
+| **Text** | A−, the current percent, A+ | 80, 100, 120, 150% | 100% | Full-page documents and the notes panels |
 | **Width** | Narrow, Normal, Full (icon buttons with tooltips) | Narrow 720px, Normal 1600px, Full (no limit) | Normal | Full-page documents only |
 | **Doc theme** | Sun, Moon | Stored as `match`, `light` or `dark` | `match` (follows the interface theme) | Every rendered document, independent of the interface theme |
 

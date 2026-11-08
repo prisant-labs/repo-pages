@@ -27,7 +27,7 @@ window.rpChecks = async function rpChecks() {
 
     // Layout and registry
     check("footer order", [...q(".nav-footer").children].map(e => e.id || e.className).join() === "settingsBtn,buildStamp,themeToggle");
-    const want = { theme: "system", uiScale: 1, treeScale: 1, indent: "default", indentCustom: 2, density: "default", sort: "name", guideLines: true, zebra: false, zebraSpan: "full", zebraStrength: "medium", folderIcons: false, iconStyle: "filled", iconColor: "accent", typeBadges: true, folderCounts: true, wrapNames: false, reveal: true, defaultTab: "folders", recentDays: 0 };
+    const want = { theme: "system", uiScale: 1, treeScale: 1, indent: "default", indentCustom: 1.25, density: "default", sort: "name", guideLines: true, zebra: false, zebraSpan: "full", zebraStrength: "medium", folderIcons: false, iconStyle: "filled", iconColor: "accent", typeBadges: true, folderCounts: true, wrapNames: false, reveal: true, defaultTab: "folders", recentDays: 0 };
     check("defaults", JSON.stringify(Object.keys(want).map(k => defaults[k])) === JSON.stringify(Object.values(want)), Object.keys(want).filter(k => defaults[k] !== want[k]).join());
     const bad = { uiScale: "huge", zebra: "yes", recentDays: 12, defaultTab: "nope", iconColor: "amber", theme: "blue", indentCustom: 99 };
     check("stored values validated", Object.entries(bad).every(([k, v]) => !PREF_SPEC[k][1](v)));
@@ -35,7 +35,7 @@ window.rpChecks = async function rpChecks() {
     // Tree geometry at every size, icons on and off
     let geoBad = [], geoSeen = false;
     const rootPx = px(document.documentElement);
-    for (const [indent, indentCustom, rem] of [["default", 2, 1.55], ["compact", 2, 1], ["custom", 0.5, 0.5], ["custom", 2, 2], ["custom", 4, 4]]) for (const treeScale of TEXT_SIZES) for (const folderIcons of [false, true]) {
+    for (const [indent, indentCustom, rem] of [["default", 2, 1], ["compact", 2, 0.7], ["custom", 0.5, 0.5], ["custom", 2, 2], ["custom", 4, 4]]) for (const treeScale of TEXT_SIZES) for (const folderIcons of [false, true]) {
       setPrefs({ indent, indentCustom, treeScale, folderIcons });
       const lists = qa("#navView .tree-children:not(.closed)").filter(k => k.previousElementSibling);
       const list = lists[0], chev = list && list.previousElementSibling.querySelector(".chev").getBoundingClientRect();
@@ -45,10 +45,31 @@ window.rpChecks = async function rpChecks() {
         if (Math.abs(step - (rem * rootPx + 1)) > 1.5) geoBad.push(`indent ${indent}/${indentCustom}/${treeScale} ${step.toFixed(1)}px`);
       }
       const mixed = lists.find(k => k.querySelector(":scope > .tree-file") && k.querySelector(":scope > .tree-folder"));
-      if (mixed) { geoSeen = true; const d = mixed.querySelector(":scope > .tree-file .tbadge").getBoundingClientRect().left - mixed.querySelector(":scope > .tree-folder .tree-name").getBoundingClientRect().left; if (Math.abs(d) > 0.6) geoBad.push(`badge ${treeScale}/${folderIcons} ${d.toFixed(1)}px`); }
+      if (mixed) { // a file's badge takes the column after a folder's chevron: the icon when icons are on, or else the name
+        geoSeen = true;
+        const sibling = mixed.querySelector(":scope > .tree-folder"), mark = [...sibling.querySelectorAll(".ficon")].find(el => getComputedStyle(el).display !== "none") || sibling.querySelector(".tree-name");
+        const d = mixed.querySelector(":scope > .tree-file .tbadge").getBoundingClientRect().left - mark.getBoundingClientRect().left;
+        if (Math.abs(d) > 0.6) geoBad.push(`badge ${treeScale}/${folderIcons} ${d.toFixed(1)}px`);
+      }
     }
     check("tree geometry", !geoBad.length, geoBad.slice(0, 3).join("; ")); if (!geoSeen) skip("badge alignment: no folder holds both files and folders");
     setPrefs({ indent: "default", indentCustom: 2, treeScale: 1, folderIcons: false });
+
+    // Guide lines must be visible, not only present, in both themes and on stripes
+    const channels = c => c.match(/[\d.]+/g).map(Number);
+    const luminance = ([r, g, b]) => [r, g, b].map(c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+    const contrast = (a, b) => { const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x); return (hi + 0.05) / (lo + 0.05); };
+    const guideList = () => q("#navView .tree-children:not(.closed)");
+    for (const theme of ["light", "dark"]) {
+      PREFS.theme = theme; applyTheme(); setPrefs({ guideLines: true });
+      const line = channels(getComputedStyle(guideList()).borderLeftColor), plain = channels(getComputedStyle(q("#navPanel")).backgroundColor);
+      const stripe = channels(getComputedStyle(document.documentElement).getPropertyValue("--zebra-strong")), onStripe = plain.map((c, i) => c + (stripe[i] - c) * stripe[3]);
+      check(`guide lines are visible in ${theme}`, contrast(line, plain) >= 2, contrast(line, plain).toFixed(2));
+      check(`guide lines are visible on stripes in ${theme}`, contrast(line, onStripe) >= 2, contrast(line, onStripe).toFixed(2));
+      setPrefs({ guideLines: false });
+      check(`guide lines turn off in ${theme}`, getComputedStyle(guideList()).borderLeftColor === "rgba(0, 0, 0, 0)");
+    }
+    Object.assign(PREFS, { theme: "system", guideLines: true }); applyTheme(); setPrefs({});
 
     // Text scales stay in their own areas
     const crumb = q(".breadcrumb"), file = q("#navView .tree-file"), body = q(".md-body");
@@ -195,6 +216,19 @@ window.rpChecks = async function rpChecks() {
     q('#settingsBody [data-pref="mdWidth"][data-val="narrow"]').click();
     check("document width shared with the doc footer", document.documentElement.getAttribute("data-md-width") === "narrow");
     q('#settingsBody [data-toggle="zebra"]').click();
+    const docText = qa('#settingsBody [data-pref="mdTextScale"]');
+    check("document text size offers S, M, L, XL", docText.map(b => b.textContent).join() === "S,M,L,XL");
+    check("document text size is labeled Text size", docText[0].closest(".settings-row").querySelector(".settings-label").textContent === "Text size");
+    q('#settingsBody [data-pref="mdTextScale"][data-val="1.5"]').click();
+    check("document text size applies at once", getComputedStyle(document.documentElement).getPropertyValue("--md-text-scale").trim() === "1.5");
+    check("focus stays on the pressed size", document.activeElement.dataset.pref === "mdTextScale" && document.activeElement.classList.contains("selected"));
+    const footerPct = q(".md-footer .md-text-pct");
+    if (footerPct) {
+      check("document text size shared with the doc footer", footerPct.textContent === "150%", footerPct.textContent);
+      check("doc footer A+ stops at XL", q('.md-footer [data-mdtext="1"]').disabled);
+      q('.md-footer [data-mdtext="-1"]').click();
+      check("doc footer steps through the same sizes", mdTextScale === 1.2 && !!q('#settingsBody [data-pref="mdTextScale"][data-val="1.2"].selected'), String(mdTextScale));
+    } else skip("doc footer text size: open a Markdown file");
     q("#settingsReset").click();
     check("reset restores everything", Object.keys(defaults).every(k => PREFS[k] === defaults[k]) && mdWidth === "normal" && mdTextScale === 1 && mdDocTheme === "match");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
