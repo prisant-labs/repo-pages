@@ -29,9 +29,11 @@ python3 examples/build_demo.py --viewer viewer --generator generator/build_site.
 npm install --no-save --no-package-lock playwright
 npx playwright install chromium
 node tests/run_browser_checks.mjs
+python3 generator/build_site.py --viewer viewer --out /tmp/repo-pages-site
+node tests/run_render_check.mjs /tmp/repo-pages-site
 ```
 
-Use `python` on Windows if `python3` is not found. To use an installed browser instead of downloading Chromium, set `RP_BROWSER_CHANNEL` to `msedge` or `chrome`.
+The last two lines build this repository as an ordinary site and check that its Markdown renders with the vendored libraries loaded by URL. Use `python` on Windows if `python3` is not found. To use an installed browser instead of downloading Chromium, set `RP_BROWSER_CHANNEL` to `msedge` or `chrome`.
 
 The browser checks cover settings behavior on one Markdown file. A change to another view still needs a look in a browser:
 

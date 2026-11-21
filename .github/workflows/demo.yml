@@ -73,6 +73,13 @@ jobs:
           npm install --no-save --no-package-lock playwright@1.64.1
           npx playwright install --with-deps chromium
 
+      # The demo inlines marked and DOMPurify, so its checks cannot see a broken loader
+      # path. The site the action built loads them by URL, as every published site does.
+      - name: Check that Markdown renders on the site the action built
+        env:
+          SITE: ${{ steps.action.outputs.site_path }}
+        run: node tests/run_render_check.mjs "$SITE" "#/p/README.md"
+
       - name: Run the browser checks
         run: node tests/run_browser_checks.mjs
 

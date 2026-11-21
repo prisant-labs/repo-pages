@@ -32,6 +32,7 @@ flowchart LR
 | Demo build | `examples/build_demo.py` | Replays the history, runs the generator and folds everything into one page |
 | Browser checks | `tests/browser_checks.js` | 64 settings behavior checks that run inside the page |
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
+| Render check | `tests/run_render_check.mjs` | Opens one Markdown file on an ordinary build, which loads `marked` and DOMPurify by URL, and fails unless both load and the file renders |
 | Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
 | Vendor watch | `tests/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
 | Action | `action.yml` | Checks, builds and deploys a repository, using this repository's viewer and generator |
@@ -91,7 +92,7 @@ Dates are relative to the build, so the output changes on every run. **Do not co
 
 | Job | Runs on | What it does |
 |---|---|---|
-| `build` | Every trigger | Runs the action in build-only mode, tests the generator, builds the demo, runs the browser checks and uploads the page |
+| `build` | Every trigger | Runs the action in build-only mode, tests the generator, builds the demo, runs the render check on the action's site and the browser checks on the demo, and uploads the page |
 | `deploy` | `main` only, not pull requests | Publishes the uploaded page to GitHub Pages |
 
 The demo comes from the viewer and generator in the same commit, so it cannot fall behind them. A failed test or check stops the run before anything is published.
@@ -114,6 +115,10 @@ python3 examples/build_demo.py --viewer viewer --generator generator/build_site.
 npm install --no-save --no-package-lock playwright
 npx playwright install chromium
 node tests/run_browser_checks.mjs
+python3 generator/build_site.py --viewer viewer --out /tmp/repo-pages-site
+node tests/run_render_check.mjs /tmp/repo-pages-site
 ```
 
 The generator tests do not cover the viewer. The browser checks cover settings behavior on one Markdown file, so a change to another view still needs a look in the browser.
+
+The browser checks run on the demo, which inlines `marked` and DOMPurify into the page, so they cannot notice a wrong `MARKED_SRC` or `PURIFY_SRC`. The render check covers that gap. It builds this repository the way the action builds an adopter's, opens `README.md`, and fails if either library does not load from `_viewer/vendor/` or the file falls back to plain text. In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` before passing a `#/p/...` route, or the shell rewrites it as a drive path.
