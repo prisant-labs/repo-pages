@@ -4,8 +4,8 @@ Third-party scripts the site viewer loads from the site itself instead of a CDN.
 
 | File | Package | From the tarball | SHA-256 | License |
 |------|---------|------------------|---------|---------|
-| `marked-18.1.2.umd.js` | `marked@18.1.2` | `lib/marked.umd.js` | `9eb730d2362ae1a8c6201698f17009e16671be6946d3d06503ddc0575283db7c` | MIT |
-| `purify-3.4.17.min.js` | `dompurify@3.4.17` | `dist/purify.min.js` | `cd37898f9782adf54820c413191b5691803f0f137c799d6edcfd38523b4c2c31` | Apache-2.0 or MPL-2.0 |
+| `marked-18.2.0.umd.js` | `marked@18.2.0` | `lib/marked.umd.js` | `392f4df89533b50f1dadff3f6dc0952350bd39c9f17def50a0374ef47d6147ef` | MIT |
+| `purify-3.4.18.min.js` | `dompurify@3.4.18` | `dist/purify.min.js` | `8053ee2a6a09f9d50f7fcd6fb7f07072f52c7f3fa9aa12147cab4feaf65ee970` | Apache-2.0 or MPL-2.0 |
 
 The viewer (`../index.html`) loads both on the first Markdown render and passes every `marked.parse` result through `DOMPurify.sanitize` before it reaches the page. If either file fails to load, Markdown shows as plain text.
 
