@@ -46,7 +46,7 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 - A generator with its own tests, and a rename map that makes links in docs and old `#/p/` links follow renames.
 - Hash routes in the form `#/p/path`, `#/f/folder` and `#/search?q=`.
 - A one-page demo built from the real viewer and generator.
-- 64 browser checks for settings behavior.
+- Browser checks for settings behavior, which the runner counts on every run.
 - A workflow that runs the tests and checks on every relevant change, and publishes the demo from `main`.
 - A GitHub Action that publishes any repository from one workflow file, with checks before it publishes and a list of what went public.
 - Versioned releases, with a major tag that adopters can follow.

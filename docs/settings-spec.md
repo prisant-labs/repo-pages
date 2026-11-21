@@ -50,7 +50,7 @@ Defaults are in bold. Every key uses the `rp.` prefix.
 
 - `rp.theme` stores `"light"`, `"dark"` or `"system"`. The script in `<head>` that applies the theme before first paint accepts only `"light"` and `"dark"`, so `"system"` sets no theme attribute and the CSS follows the operating system.
 - Values are stored as JSON. `rp.nav.recentDays` holds a number (`0`, `7`, `30` or `90`), and `0` means Latest. The Interface and Tree text scales hold `0.9`, `1`, `1.1` or `1.25`. The document text scale holds `0.8`, `1`, `1.2` or `1.5`.
-- Each setting has one registry entry with its storage key, validator and default. Reset reads its defaults from that registry, so a new setting is reset without extra code.
+- Each setting has one registry entry with its storage key, validator and default. Reset reads its defaults from that registry, so a new setting is reset without extra code. The three document settings, Text size, Width and Doc theme, are the exception: they keep their own validators beside the Markdown reader controls, and Reset sets their defaults by name. Folding them into the registry is parked until the settings redesign.
 - A stored value that fails its validator gives the default. This includes values from an earlier design, such as an icon color of `"amber"`.
 
 ## Footer
