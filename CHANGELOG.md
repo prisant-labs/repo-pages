@@ -13,6 +13,23 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 - **Vertical guide lines are now visible.** They were drawn in the panel's border color, at about 1.2:1 contrast, which made the setting look broken. They now have their own color, at more than 2:1 in both themes.
 
+## [1.0.2] - 2026-11-20
+
+### Added
+
+- **A render check on an ordinary site.** `tests/run_render_check.mjs` opens a Markdown file on the site the action builds, which loads `marked` and DOMPurify by URL, unlike the demo. CI now fails if either library does not load or the file falls back to plain text. Before this, a wrong vendored file name passed every check while published sites lost rendered Markdown.
+
+### Changed
+
+- **`marked` is now 18.2.0.** The vendored Markdown library moves up from 18.1.2, taking in 18.1.3 as well. Upstream fixes edge cases in setext headings, emphasis, link labels and references, nested lists, and lazy lines after HTML blocks and tables. Every Markdown file in this repository renders exactly as it did before, but a file that relies on one of those edge cases can render differently.
+- **DOMPurify is now 3.4.18.** The vendored sanitizer moves up from 3.4.17.
+
+### Security
+
+- **A quoted `"false"` no longer publishes hidden files.** Before this fix, `"includeHidden": "false"` in `.github/repo-pages.json` counted as on, because any non-empty string is true in Python, so tracked dotfiles were published. The generator now checks every documented config key's type before it selects files or touches the output folder. A wrong type stops the build with the file name and the key. Real `true` and `false` work as before. If your build now stops on this error, remove the quotes. If your config said `"includeHidden": "false"`, check your published site for dotfiles you did not mean to publish.
+- **Hostile Markdown is less able to slow a reader's tab.** `marked` 18.1.3 removes a quadratic scan over unmatched emphasis delimiters.
+- **DOMPurify hardening.** 3.4.18 fixes a direct property read in its clobbering check and drops several SVG attribute names from its element allow-list. Its `SAFE_FOR_TEMPLATES` and hook fixes do not affect repo-pages, which uses neither.
+
 ## [1.0.1] - 2026-11-06
 
 ### Changed

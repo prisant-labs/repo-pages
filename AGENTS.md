@@ -26,9 +26,11 @@ python3 generator/test_build_site.py
 python3 examples/build_demo.py --viewer viewer --generator generator/build_site.py
 npm install --no-save --no-package-lock playwright
 node tests/run_browser_checks.mjs
+python3 generator/build_site.py --viewer viewer --out /tmp/repo-pages-site
+node tests/run_render_check.mjs /tmp/repo-pages-site
 ```
 
-Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. All three steps must pass before a merge, and `.github/workflows/demo.yml` repeats them on every pull request. The "Protect main" ruleset blocks direct pushes to `main`, allows squash merges only, and requires the workflow's `build` check. Read the results rather than assuming them.
+Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. The generator tests, the browser checks on the demo and the render check on an ordinary build must all pass before a merge, and `.github/workflows/demo.yml` repeats them on every pull request. In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` before passing a `#/p/...` route to either runner. The "Protect main" ruleset blocks direct pushes to `main`, allows squash merges only, and requires the workflow's `build` check. Read the results rather than assuming them.
 
 ## Rules
 

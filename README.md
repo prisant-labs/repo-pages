@@ -17,7 +17,7 @@ repo-pages renders Markdown, runs HTML pages, turns CSV files into sortable tabl
 <p>
   <img src="https://img.shields.io/badge/status-active-success?style=flat-square" alt="Status: Active">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/prisant-labs/repo-pages/releases"><img src="https://img.shields.io/badge/release-v1.0.1-blue?style=flat-square" alt="Latest release v1.0.1"></a>
+  <a href="https://github.com/prisant-labs/repo-pages/releases"><img src="https://img.shields.io/badge/release-v1.0.2-blue?style=flat-square" alt="Latest release v1.0.2"></a>
   <a href="https://projects.prisantlabs.com/repo-pages/"><img src="https://img.shields.io/badge/demo-live-success?style=flat-square" alt="Live demo"></a>
   <a href="https://github.com/prisant-labs/repo-pages/actions/workflows/demo.yml"><img src="https://github.com/prisant-labs/repo-pages/actions/workflows/demo.yml/badge.svg" alt="Demo workflow status"></a>
   <img src="https://img.shields.io/badge/server-none-brightgreen?style=flat-square" alt="Server: none">
@@ -183,7 +183,7 @@ Everything is optional. To change a default, add `.github/repo-pages.json`, whic
 }
 ```
 
-The title defaults to the repository's name. The action also takes these inputs:
+The title defaults to the repository's name. `includeHidden` and `sandboxHtml` take `true` or `false` without quotes: a quoted `"false"` stops the build with an error rather than being read as on. The action also takes these inputs:
 
 | Input | Default | What it does |
 |---|---|---|
@@ -333,7 +333,7 @@ The viewer and generator always ship together, so they cannot get out of step. T
 
 |  |  |
 |---|---|
-| **Latest release** | [v1.0.1](https://github.com/prisant-labs/repo-pages/releases/tag/v1.0.1) |
+| **Latest release** | [v1.0.2](https://github.com/prisant-labs/repo-pages/releases/tag/v1.0.2) |
 | **Install** | One workflow file, using `prisant-labs/repo-pages@v1` |
 | **Live demo** | [projects.prisantlabs.com/repo-pages](https://projects.prisantlabs.com/repo-pages/), rebuilt from `main` |
 | **Viewer** | One HTML file, plus `marked` and DOMPurify at pinned versions |
