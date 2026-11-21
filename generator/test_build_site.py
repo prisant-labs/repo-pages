@@ -226,6 +226,58 @@ class ViewerAndConfigTests(unittest.TestCase):
             self.build_outside()
         self.assertIn(".github/repo-pages.json", str(caught.exception))
 
+    def config_with_hidden_file(self, cfg):
+        self.write(".hidden-note.txt", "tracked dotfile\n")
+        if cfg is not None:
+            self.write(".github/repo-pages.json", json.dumps(cfg))
+        commit(self.repo, "Add a dotfile", "Ann", "2026-01-02T10:00:00Z")
+
+    def test_hidden_files_stay_out_by_default_and_with_false(self):
+        for cfg in (None, {"includeHidden": False}):
+            with self.subTest(cfg=cfg):
+                self.config_with_hidden_file(cfg)
+                data, out = self.build_outside()
+                self.assertNotIn(".hidden-note.txt", [f["path"] for f in data["files"]])
+                self.assertFalse((out / ".hidden-note.txt").exists())
+
+    def test_hidden_files_are_published_with_true(self):
+        self.config_with_hidden_file({"includeHidden": True})
+        data, out = self.build_outside()
+        self.assertIn(".hidden-note.txt", [f["path"] for f in data["files"]])
+        self.assertTrue((out / ".hidden-note.txt").exists())
+
+    def test_a_string_false_is_refused_before_the_output_is_touched(self):
+        self.config_with_hidden_file({"includeHidden": "false"})
+        out = Path(self.tmp.name) / "site"
+        out.mkdir()
+        (out / "previous.txt").write_text("earlier build")
+        with self.assertRaises(SystemExit) as caught:
+            module.build(self.repo, out, self.viewer)
+        message = str(caught.exception)
+        self.assertIn(".github/repo-pages.json", message)
+        self.assertIn('"includeHidden" must be true or false', message)
+        self.assertTrue((out / "previous.txt").exists())
+        self.assertFalse((out / ".hidden-note.txt").exists())
+
+    def test_wrong_types_name_the_key(self):
+        cases = {
+            "sandboxHtml": {"sandboxHtml": "no"},
+            "exclude": {"exclude": "drafts/**"},
+            "title": {"title": 7},
+        }
+        for key, cfg in cases.items():
+            with self.subTest(key=key):
+                self.write(".github/repo-pages.json", json.dumps(cfg))
+                with self.assertRaises(SystemExit) as caught:
+                    self.build_outside()
+                self.assertIn(f'"{key}" must be', str(caught.exception))
+
+    def test_config_must_be_an_object(self):
+        self.write(".github/repo-pages.json", "[]")
+        with self.assertRaises(SystemExit) as caught:
+            self.build_outside()
+        self.assertIn("must hold a JSON object", str(caught.exception))
+
     def test_missing_viewer_is_a_clear_error(self):
         with self.assertRaises(SystemExit) as caught:
             module.build(self.repo, Path(self.tmp.name) / "site")

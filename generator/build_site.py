@@ -261,14 +261,41 @@ def run_url() -> str:
     return f"{server}/{name}/actions/runs/{run}" if server and name and run else ""
 
 
+# Each documented key and the type it must have. A wrong type fails the build rather than
+# being coerced: under Python truthiness the string "false" would turn includeHidden on.
+CONFIG_TYPES = {
+    "title": (str, "a string"),
+    "description": (str, "a string"),
+    "exclude": (list, "a list of strings"),
+    "includeHidden": (bool, "true or false"),
+    "sandboxHtml": (bool, "true or false"),
+}
+
+
+def check_config(cfg: object, name: str) -> dict:
+    if not isinstance(cfg, dict):
+        raise SystemExit(f"{name} must hold a JSON object, not {type(cfg).__name__}.")
+    for key, (kind, wanted) in CONFIG_TYPES.items():
+        if key not in cfg:
+            continue
+        value = cfg[key]
+        ok = isinstance(value, kind)
+        if key == "exclude" and ok:
+            ok = all(isinstance(p, str) for p in value)
+        if not ok:
+            raise SystemExit(f'{name}: "{key}" must be {wanted}, not {json.dumps(value)}.')
+    return cfg
+
+
 def load_config(repo: Path) -> dict:
     for name in CONFIG_FILES:
         path = repo / name
         if path.exists():
             try:
-                return json.loads(path.read_text(encoding="utf-8"))
+                cfg = json.loads(path.read_text(encoding="utf-8"))
             except json.JSONDecodeError as error:
                 raise SystemExit(f"{name.as_posix()} is not valid JSON: {error}")
+            return check_config(cfg, name.as_posix())
     return {}
 
 
