@@ -30,7 +30,7 @@ flowchart LR
 | Generator tests | `generator/test_build_site.py` | Standard library `unittest` tests that build temporary repositories |
 | Sample | `examples/initech/`, `examples/initech-history.json` | 88 parody files, and a script of 41 commits that gives them a history |
 | Demo build | `examples/build_demo.py` | Replays the history, runs the generator and folds everything into one page |
-| Browser checks | `tests/browser_checks.js` | 64 settings behavior checks that run inside the page |
+| Browser checks | `tests/browser_checks.js` | Settings behavior checks that run inside the page. The runner prints the current count |
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
 | Render check | `tests/run_render_check.mjs` | Opens one Markdown file on an ordinary build, which loads `marked` and DOMPurify by URL, and fails unless both load and the file renders |
 | Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
@@ -103,7 +103,9 @@ The built page is the viewer, the generator's output and the sample content. It 
 
 ## Settings
 
-All reader settings go through one registry, `PREF_SPEC`, in the viewer. Each entry holds a storage key, a validator and a default. The popover is built from a settings list, and Reset reads its defaults from the registry. A new setting therefore gets validation and reset without extra code. [settings-spec.md](settings-spec.md) has the behavior, and [design.md](design.md) has the measurements.
+Reader settings go through one registry, `PREF_SPEC`, in the viewer. Each entry holds a storage key, a validator and a default. The popover is built from a settings list, and Reset reads its defaults from the registry. A new setting therefore gets validation and reset without extra code.
+
+The three document settings are the exception. Text size (`rp.md.textScale`), Width (`rp.md.width`) and Doc theme (`rp.md.theme`) are read with their own validators next to the Markdown reader controls, and the Reset handler sets their defaults by name. A change to one of them must update both places. Moving them into `PREF_SPEC` is parked until the settings redesign. [settings-spec.md](settings-spec.md) has the behavior, and [design.md](design.md) has the measurements.
 
 ## Verifying a change
 

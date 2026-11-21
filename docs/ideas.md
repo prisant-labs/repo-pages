@@ -56,6 +56,7 @@ None of these are commitments. Each idea says what it would give a reader and wh
 | **Split the viewer into modules** | Faster edits and reviews; no change for readers | Static ES modules served as they are, still no build step |
 | **Keyboard and screen-reader support** | Every file reachable without a mouse | Tree roles, focus order, visible focus |
 | **Slack post on publish** | The team hears about new and changed docs | A workflow step after deploy that posts the recent list |
+| **GitHub Marketplace listing** | Adopters can find the Action by searching the Marketplace. The Action already works without a listing | The maintainer accepts the Marketplace Developer Agreement and ticks the publish box on a release. Undecided: list it when the project is announced, or treat listing as the announcement. If it ships, add the box to the release steps in `AGENTS.md` |
 
 ## Building the viewer
 

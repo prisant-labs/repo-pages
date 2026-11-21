@@ -39,14 +39,14 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 | Appearance | Theme (Light, Dark or System), Interface text |
 | Tree | Tree text, Folder indentation, Row density, Sort, Vertical guide lines, Alternating row colors, Folder icons, File type badges, Item counts on folders, Wrap long names, Reveal the open file |
 | Lists | Start on tab, New and Updated show |
-| Documents | Text, Width, Doc theme |
+| Documents | Text size, Width, Doc theme |
 
 ### Build
 
 - A generator with its own tests, and a rename map that makes links in docs and old `#/p/` links follow renames.
 - Hash routes in the form `#/p/path`, `#/f/folder` and `#/search?q=`.
 - A one-page demo built from the real viewer and generator.
-- 64 browser checks for settings behavior.
+- Browser checks for settings behavior, which the runner counts on every run.
 - A workflow that runs the tests and checks on every relevant change, and publishes the demo from `main`.
 - A GitHub Action that publishes any repository from one workflow file, with checks before it publishes and a list of what went public.
 - Versioned releases, with a major tag that adopters can follow.
