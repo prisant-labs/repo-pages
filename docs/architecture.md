@@ -64,7 +64,7 @@ This repository keeps the viewer in `viewer/` and the generator in `generator/`,
 
 Without `--viewer`, the generator reads the viewer from `.github/site/` in the repository it publishes. `build_demo.py` sets up that layout in a temporary repository. `.github/**` is never published, so neither the viewer's source nor the config appears as a site file.
 
-The generator reads its config from `.github/repo-pages.json`, and falls back to `.github/site/config.json`.
+The generator reads its config from `.github/repo-pages.json`, and falls back to `.github/site/config.json`. It checks the config before it selects any file or touches the output folder. The config must be a JSON object. `title` and `description` must be strings, `exclude` must be a list of strings, and `includeHidden` and `sandboxHtml` must be `true` or `false`. A wrong type stops the build with the file name and the key. The generator never coerces a value, because under Python truthiness the string `"false"` would turn `includeHidden` on. Unknown keys are ignored.
 
 ## What the generator publishes
 

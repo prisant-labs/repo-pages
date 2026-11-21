@@ -4,6 +4,10 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Security
+
+- **A quoted `"false"` no longer publishes hidden files.** Before this fix, `"includeHidden": "false"` in `.github/repo-pages.json` counted as on, because any non-empty string is true in Python, so tracked dotfiles were published. The generator now checks every documented config key's type before it selects files or touches the output folder. A wrong type stops the build with the file name and the key. Real `true` and `false` work as before. If your build now stops on this error, remove the quotes. If your config said `"includeHidden": "false"`, check your published site for dotfiles you did not mean to publish.
+
 ## [1.0.1] - 2026-11-06
 
 ### Changed

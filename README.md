@@ -183,7 +183,7 @@ Everything is optional. To change a default, add `.github/repo-pages.json`, whic
 }
 ```
 
-The title defaults to the repository's name. The action also takes these inputs:
+The title defaults to the repository's name. `includeHidden` and `sandboxHtml` take `true` or `false` without quotes: a quoted `"false"` stops the build with an error rather than being read as on. The action also takes these inputs:
 
 | Input | Default | What it does |
 |---|---|---|
