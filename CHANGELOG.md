@@ -4,6 +4,14 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Added
+
+- **A `require-private-site` input.** Set it to `"true"` to publish only when the GitHub Pages site is private. The run stops before deploying if the site is public, or if GitHub does not say, whatever the repository's visibility. `allow-private-repository` does not override it. A value other than `"true"` or `"false"` stops the run, so a typo cannot turn it off. It replaces the guard step that some adopters wrote by hand.
+
+### Changed
+
+- **A private site publishes without a setting.** The action now checks whether the GitHub Pages site is public, not whether the repository is private. A private or internal repository whose site is private, which needs GitHub Enterprise Cloud, now publishes. Before, it was refused unless `allow-private-repository` was `"true"`. A private repository whose site is public is still refused by default. If GitHub does not say whether the site is public, the action treats it as public. Internal repositories count as private, and the error messages say so.
+
 ## [1.0.2] - 2026-11-20
 
 ### Added

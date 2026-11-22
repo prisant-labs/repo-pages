@@ -18,7 +18,7 @@ Include the steps to reproduce the problem, the browser you used, and a small fi
 repo-pages has no server. Its risks lie in what the generator publishes and in what the viewer does with a repository's files.
 
 - **Files the generator should not publish.** The generator publishes tracked regular files, minus `.github/**`, hidden files and your `exclude` patterns. It skips symlinks and submodules, and it stops on a config value of the wrong type instead of guessing what it means. Anything that makes it publish something else is in scope.
-- **The action.** It refuses a private repository unless `allow-private-repository` is `true`, and it checks out without keeping credentials. Anything that gets around either is in scope.
+- **The action.** It refuses a private or internal repository whose GitHub Pages site is public, or whose site visibility GitHub does not report, unless `allow-private-repository` is `true`. With `require-private-site` set to `true`, it refuses any site that is not private. It checks out without keeping credentials. Anything that gets around these is in scope.
 - **Markdown that runs code.** The viewer passes every rendered Markdown file through DOMPurify. A Markdown file that still runs script is in scope.
 - **Other file views.** CSV, JSON, YAML, code and image views treat a file's content as data. Any such file that runs script is in scope.
 - **Commit data.** Author names, commit subjects and file paths appear in the page. If one of them can run script, that is in scope.

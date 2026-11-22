@@ -43,7 +43,7 @@ None of these are commitments. Each idea says what it would give a reader and wh
 | **Open on GitHub, Raw, History** (built) | One click from any page to its source, its raw file and its commits | Build the URLs from `config.repoUrl` and the path |
 | **Last-commit stamp** (built) | Each file shows who changed it last, when, and in which commit | From the generator's `git log` pass |
 | **Broken link report** | A list of links in docs that point at missing files | Check relative links in the generator and fail or warn |
-| **Private-site alert** | The workflow fails loudly if the Pages site is not private. It detects exposure but cannot undo it | One call to the Pages API on each run |
+| **Private-site alert** (built) | The workflow fails loudly if the Pages site is not private. It detects exposure but cannot undo it | The action's `require-private-site` input, which reads the Pages settings on each run |
 
 ## More ideas
 
