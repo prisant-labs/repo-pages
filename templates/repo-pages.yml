@@ -33,3 +33,6 @@ jobs:
     steps:
       - id: site
         uses: prisant-labs/repo-pages@v1
+        # Uncomment to stop every deploy while the GitHub Pages site is public.
+        # with:
+        #   require-private-site: 'true'

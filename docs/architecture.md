@@ -36,7 +36,7 @@ flowchart LR
 | Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
 | Vendor watch | `tests/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
 | Action | `action.yml` | Checks, builds and deploys a repository, using this repository's viewer and generator |
-| Preflight | `generator/preflight.py` | Refuses a private repository, and turns setup mistakes into errors that name the fix |
+| Preflight | `generator/preflight.py` | Refuses a private repository whose site is public, and turns setup mistakes into errors that name the fix |
 | Adopter workflow | `templates/repo-pages.yml` | The one file an adopter adds. It carries the permissions and environment |
 
 ## The action
@@ -45,7 +45,7 @@ An adopter adds `templates/repo-pages.yml` and copies nothing. The workflow runs
 
 | Step | What it does |
 |---|---|
-| Preflight | Stops on a private repository, and on missing Pages settings or `id-token: write`. It runs first, so nothing is checked out or built on a refusal |
+| Preflight | Stops on a private repository whose site is public, and on missing Pages settings or `id-token: write`. It runs first, so nothing is checked out or built on a refusal |
 | Checkout | Fetches full history, because authors and dates come from git. It keeps no credentials on disk, because the build does not need them |
 | Build | Runs `build_site.py --viewer` into a temporary folder, and writes the published file list to the run's summary page |
 | Upload and deploy | Publish the folder to GitHub Pages. The `deploy: false` input skips these steps and the preflight |
@@ -55,6 +55,7 @@ Some choices here are worth keeping:
 - **The inner actions are pinned to commit SHAs,** because every adopter inherits them. A moved tag upstream cannot change what runs.
 - **The upload sets `include-hidden-files: true`.** The upload action otherwise drops dotfiles, which would silently undo `includeHidden`. The generator stays the only place that decides what gets published.
 - **A composite action cannot set permissions or an environment,** so the adopter's workflow carries them. The deploy needs `pages: write` and `id-token: write`. It succeeds without `environment`, but the template keeps it, because `deploy-pages` recommends it and it puts the URL on the run page.
+- **The preflight decides on the site's visibility, not the repository's.** It reads `public` from the Pages settings. A private or internal repository publishes when `public` is exactly `false`. Otherwise it needs `allow-private-repository`. With `require-private-site`, only `false` publishes, whatever the repository's visibility. A missing or non-boolean `public` counts as public, so a change in GitHub's response can only refuse, never expose a site. If the Pages settings cannot be read, their own error stops the run, and the next run checks visibility.
 - **The preflight cannot detect a missing `pages: write` on a public repository,** because reading the settings still succeeds. `deploy-pages` fails with a message that names the permission.
 
 `demo.yml` runs the action with `deploy: false` on every pull request, and checks what it built.
