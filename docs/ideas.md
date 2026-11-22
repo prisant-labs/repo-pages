@@ -36,6 +36,19 @@ None of these are commitments. Each idea says what it would give a reader and wh
 | **Diff view for Markdown** | See what changed in a doc, not only that it changed | Link to the GitHub compare view first. A rendered diff later |
 | **Weekly digest** | A Slack post with the files added and updated that week | A scheduled workflow that reads the data file |
 
+## Seeing at a glance
+
+Every idea here draws plain SVG in the viewer, so none of them loads anything from the network or needs a charting library. Map views for GeoJSON are left out, because map tiles come from a network server.
+
+| Idea | What the reader gets | What it takes |
+|---|---|---|
+| **Charts for CSV files** | A Chart toggle beside the sortable table. Dates against numbers draw a line, and categories against numbers draw bars. The reader can change the columns | Guess column types from the values, which is the fiddly part. The sample's ledger, market sizing and requisition files make good test cases |
+| **Repository treemap** | The whole repository as nested rectangles, sized by bytes and colored by file type or by age. Clicking opens a file or zooms into a folder | A squarified layout over the data file's paths and sizes. One large binary can dwarf the documents, so the view needs a way to cap or set aside outliers |
+| **Freshness coloring** | The tree and folder tables tint each file by the age of its last change, so stale docs stand out | Each file's last-commit date is already in the data file. It is a reader setting, so it goes through `KEYS` and `PREF_SPEC`, and the tint must not disturb the tree geometry |
+| **Activity heatmap** | A calendar of commits by day on the Updated or Authors tab | The data file keeps only recent commits and the commits that files point at, so a heatmap built from it would be biased. The generator would add a per-day commit count to the data file |
+| **Link graph** | A small map of the documents that one file links to and that link to it | Needs the link collection that backlinks would add. Start with one file's neighborhood, because a whole-site graph turns into a tangle past about a hundred files |
+| **Who last touched each folder** | A bar on a folder page showing who made the latest change to each file | The data file holds only the last author of each file, so label it as recent activity, not ownership |
+
 ## Sharing and trust
 
 | Idea | What the reader gets | What it takes |
