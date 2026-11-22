@@ -194,7 +194,7 @@ The title defaults to the repository's name. `includeHidden` and `sandboxHtml` t
 |---|---|---|
 | `deploy` | `true` | Set to `false` to build without publishing, for example on pull requests |
 | `allow-private-repository` | `false` | Set to `true` to publish a private repository whose site is public. A private site needs no setting |
-| `require-private-site` | `false` | Set to `true` to publish only when the site is private. `allow-private-repository` does not override it |
+| `require-private-site` | `false` | Set to `true` to publish only when the site is private. `allow-private-repository` does not override it. Any value other than `true` or `false` stops the run |
 | `token` | `github.token` | The token for the repository checks, checkout and deployment |
 
 To preview a site on your own machine, build it from a clone of this repository, and do not commit `_site/`:
@@ -278,7 +278,7 @@ The viewer and generator always ship together, so they cannot get out of step. T
 
 **Is the site private?** Only if your GitHub plan has private sites. A GitHub Pages site is public on the internet, even when its repository is private, except on GitHub Enterprise Cloud. There, an organization can make the site of a private or internal repository private. Only people with read access to the repository can then open it. A private site gets a different URL, unless it uses a custom domain. repo-pages publishes a private site with no extra setting.
 
-To keep the site private, set `require-private-site` to `true`. Each run then stops before deploying if the site is public. It cannot hide a site that someone has already made public, and runs with `deploy: false` skip the check. Check GitHub's current rules before you publish anything sensitive.
+To keep the site private, add `require-private-site: 'true'` under `with:` in the workflow, where the template has it commented out. Each run then stops before deploying if the site is public. It cannot hide a site that someone has already made public, and runs with `deploy: false` skip the check. Check GitHub's current rules before you publish anything sensitive.
 
 **Why does the Updated tab show one author for everything?** The site was built from a shallow clone. Build with full history.
 

@@ -17,7 +17,7 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ### Security
 
-- **Hostile Markdown is less able to slow a reader's tab.** `marked` 18.2.1 closes the remaining quadratic parse time on runs of unmatched emphasis and strikethrough delimiters, which 18.1.3 only partly fixed.
+- **Hostile Markdown is even less able to slow a reader's tab.** `marked` 18.2.1 follows up the 18.1.3 fix. It closes a remaining case of quadratic parse time on runs of unmatched emphasis and strikethrough delimiters.
 
 ## [1.0.2] - 2026-11-20
 
