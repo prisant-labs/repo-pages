@@ -4,6 +4,10 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Added
+
+- **A setup page, at [projects.prisantlabs.com/repo-pages/setup](https://projects.prisantlabs.com/repo-pages/setup/).** It writes `.github/workflows/repo-pages.yml`, a `.github/repo-pages.json` when a default changes, and a Dependabot file for a pinned commit. It covers every action input, every config key and the common workflow choices, such as pull-request builds and a rebuild after a bot's workflow. It predicts the action's preflight with the action's own messages, and it classifies a pasted `git ls-files -s` with the generator's rules. It runs in the browser and sends nothing anywhere. A new check, `tests/run_setup_checks.mjs`, compares its rules with the generator, the preflight, the template and the sample on every pull request.
+
 ## [1.1.0] - 2026-11-22
 
 ### Added

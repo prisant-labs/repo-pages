@@ -1,0 +1,985 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:,">
+<title>Repo Pages setup</title>
+<!--
+  The repo-pages setup page. It writes the files an adopter commits to publish a repository.
+  One self-contained file. It loads nothing from the network and sends nothing anywhere.
+  Its rules are copied from templates/repo-pages.yml, action.yml, generator/build_site.py and
+  generator/preflight.py. tests/run_setup_checks.mjs compares them with those files on every pull request.
+  Storage keys use the rps. prefix, because the page shares an origin with the demo and the rp. keys are the viewer's.
+-->
+<script>
+  (function () {
+    try {
+      var t = JSON.parse(localStorage.getItem("rps.theme"));
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    font-size: 115%;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --bg: #ffffff; --nav-bg: #f8f9fa; --nav-border: #e2e5e9; --accent: #2563eb;
+    --text: #1a1a1a; --text-muted: #6b7280; --surface: #ffffff;
+    --hover: rgba(0,0,0,0.04); --hover-accent: rgba(37,99,235,0.06);
+    --badge-bg: #e5e7eb; --input-bg: #ffffff;
+    --added-bg: #dcfce7; --added-text: #166534; --updated-bg: #dbeafe; --updated-text: #1e40af;
+    --code-bg: #f6f8fa; --mark: #fef08a;
+    --t-md: #2563eb; --t-html: #ea580c; --t-data: #059669; --t-code: #7c3aed; --t-media: #db2777; --t-other: #6b7280;
+    --tok-kw: #7c3aed; --tok-str: #047857; --tok-com: #9ca3af; --tok-num: #c2410c;
+    --scroll-thumb: rgba(0,0,0,0.2); --scroll-thumb-hover: rgba(0,0,0,0.38);
+    /* Added for this page only: warning and stop colors, in the same palette family as the viewer's added/updated pairs */
+    --warn-bg: #fef3c7; --warn-text: #92400e; --stop-bg: #fee2e2; --stop-text: #991b1b;
+    --proposed: #7c3aed; --proposed-bg: rgba(124,58,237,0.07);
+    color-scheme: light;
+  }
+  [data-theme="dark"] {
+    --bg: #111111; --nav-bg: #1a1a1a; --nav-border: #2d2d2d; --accent: #60a5fa;
+    --text: #e5e5e5; --text-muted: #8b8b8b; --surface: #222222;
+    --hover: rgba(255,255,255,0.05); --hover-accent: rgba(96,165,250,0.1);
+    --badge-bg: #333333; --input-bg: #2a2a2a;
+    --added-bg: #14532d; --added-text: #86efac; --updated-bg: #1e3a5f; --updated-text: #93c5fd;
+    --code-bg: #1c1c1c; --mark: #854d0e;
+    --t-md: #60a5fa; --t-html: #fb923c; --t-data: #34d399; --t-code: #a78bfa; --t-media: #f472b6; --t-other: #9ca3af;
+    --tok-kw: #c4b5fd; --tok-str: #6ee7b7; --tok-com: #6b7280; --tok-num: #fdba74;
+    --scroll-thumb: rgba(255,255,255,0.16); --scroll-thumb-hover: rgba(255,255,255,0.32);
+    --warn-bg: #422006; --warn-text: #fcd34d; --stop-bg: #450a0a; --stop-text: #fca5a5;
+    --proposed: #a78bfa; --proposed-bg: rgba(167,139,250,0.1);
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111111; --nav-bg: #1a1a1a; --nav-border: #2d2d2d; --accent: #60a5fa;
+      --text: #e5e5e5; --text-muted: #8b8b8b; --surface: #222222;
+      --hover: rgba(255,255,255,0.05); --hover-accent: rgba(96,165,250,0.1);
+      --badge-bg: #333333; --input-bg: #2a2a2a;
+      --added-bg: #14532d; --added-text: #86efac; --updated-bg: #1e3a5f; --updated-text: #93c5fd;
+      --code-bg: #1c1c1c; --mark: #854d0e;
+      --t-md: #60a5fa; --t-html: #fb923c; --t-data: #34d399; --t-code: #a78bfa; --t-media: #f472b6; --t-other: #9ca3af;
+      --tok-kw: #c4b5fd; --tok-str: #6ee7b7; --tok-com: #6b7280; --tok-num: #fdba74;
+      --scroll-thumb: rgba(255,255,255,0.16); --scroll-thumb-hover: rgba(255,255,255,0.32);
+      --warn-bg: #422006; --warn-text: #fcd34d; --stop-bg: #450a0a; --stop-text: #fca5a5;
+      --proposed: #a78bfa; --proposed-bg: rgba(167,139,250,0.1);
+      color-scheme: dark;
+    }
+  }
+  * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb) transparent; }
+  html, body { height: 100%; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); background: var(--bg); line-height: 1.6; overflow: hidden; }
+  button, input, select, textarea { font-family: inherit; color: inherit; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  code, .mono { font-family: var(--mono); font-size: 0.92em; }
+  code { background: var(--code-bg); padding: 0.05em 0.3em; border-radius: 4px; }
+
+  /* Header, in the viewer's header style */
+  .top { height: 48px; display: flex; align-items: center; gap: 0.7rem; padding: 0 0.85rem; border-bottom: 1px solid var(--nav-border); background: var(--bg); }
+  .top-title { font-size: 0.9rem; font-weight: 700; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.12rem 0.5rem; border-radius: 6px; font-size: 0.6rem; font-weight: 600; color: var(--text-muted); background: var(--badge-bg); white-space: nowrap; }
+  .top-space { flex: 1; }
+
+  .layout { display: grid; grid-template-columns: 210px minmax(0, 1fr) minmax(0, 46%); height: calc(100vh - 48px); }
+  .index { background: var(--nav-bg); border-right: 1px solid var(--nav-border); overflow-y: auto; padding: 0.7rem 0.6rem; }
+  .index h2 { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); padding: 0 0.35rem 0.4rem; }
+  .index a { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem; padding: 0.28rem 0.45rem; border-radius: 5px; font-size: 0.72rem; color: var(--text); text-decoration: none; }
+  .index a:hover { background: var(--hover); }
+  .index a .n { font-size: 0.58rem; color: var(--text-muted); font-family: var(--mono); }
+  .index .legend { margin-top: 1rem; padding: 0.6rem 0.45rem 0; border-top: 1px solid var(--nav-border); display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.6rem; color: var(--text-muted); }
+  .form { overflow-y: auto; padding: 0.9rem 1.1rem 3rem; display: flex; flex-direction: column; gap: 1rem; }
+  .out { overflow: hidden; border-left: 1px solid var(--nav-border); background: var(--nav-bg); display: flex; flex-direction: column; min-width: 0; }
+
+  /* Form sections, in the settings popover's style */
+  .sec { background: var(--surface); border: 1px solid var(--nav-border); border-radius: 8px; padding: 0.7rem 0.85rem 0.85rem; display: flex; flex-direction: column; gap: 0.8rem; scroll-margin-top: 0.8rem; }
+  .top a.chip.link { color: var(--accent); text-decoration: none; } .top a.chip.link:hover { text-decoration: underline; }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; padding-bottom: 0.3rem; border-bottom: 1px solid var(--nav-border); }
+  .sec-title { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
+  .sec-lede { font-size: 0.7rem; color: var(--text-muted); line-height: 1.5; margin-top: -0.3rem; }
+  .row { display: flex; flex-direction: column; gap: 0.35rem; }
+  .row[hidden] { display: none; }
+  .row.sub { margin: -0.35rem 0 0 0.2rem; padding: 0.15rem 0 0.1rem 0.65rem; border-left: 2px solid var(--nav-border); }
+  .label-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+  .label { font-size: 0.74rem; font-weight: 600; }
+  .row.sub .label { font-size: 0.68rem; color: var(--text-muted); }
+  .hint { font-size: 0.64rem; color: var(--text-muted); line-height: 1.45; margin-top: -0.1rem; }
+  .tags { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; }
+  .tag { font-family: var(--mono); font-size: 0.52rem; font-weight: 700; padding: 0.02rem 0.3rem; border-radius: 3px; letter-spacing: 0.02em; color: #fff; cursor: help; }
+  [data-theme="dark"] .tag { color: #111; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .tag { color: #111; } }
+  .tag.input { background: var(--t-html); } .tag.config { background: var(--t-data); } .tag.workflow { background: var(--t-md); }
+  .tag.context { background: var(--t-other); } .tag.main { background: var(--t-media); }
+  .tag.tool { background: var(--t-other); }
+
+  .track { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+  .opt { flex: 1 0 0; min-width: max-content; white-space: nowrap; padding: 0.3rem 0.5rem; border: 1px solid var(--nav-border); border-radius: 5px; background: var(--surface); font-size: 0.66rem; font-weight: 600; color: var(--text-muted); cursor: pointer; text-align: center; }
+  .opt:hover { background: var(--hover); border-color: var(--text-muted); }
+  .opt.selected { background: var(--hover-accent); border-color: var(--accent); color: var(--accent); }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+  .toggle { width: 34px; height: 20px; background: var(--nav-border); border-radius: 10px; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; border: none; }
+  .toggle.on { background: var(--accent); }
+  .toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #fff; border-radius: 50%; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+  .toggle.on::after { left: 16px; }
+  input[type=text], input[type=number], textarea, select { width: 100%; padding: 0.32rem 0.5rem; border: 1px solid var(--nav-border); border-radius: 5px; font-size: 0.74rem; background: var(--input-bg); outline: none; }
+  input[type=number] { width: 7rem; }
+  textarea { font-family: var(--mono); font-size: 0.68rem; line-height: 1.5; resize: vertical; min-height: 4.5rem; }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+  input.bad, textarea.bad { border-color: var(--stop-text); }
+  .field-msg { font-size: 0.62rem; color: var(--stop-text); }
+  .field-msg:empty { display: none; }
+  .fixed { font-family: var(--mono); font-size: 0.66rem; background: var(--code-bg); border: 1px solid var(--nav-border); border-radius: 5px; padding: 0.35rem 0.5rem; white-space: pre; overflow-x: auto; }
+
+  .btn { height: 28px; border: 1px solid var(--nav-border); border-radius: 6px; background: var(--surface); cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0 0.6rem; font-size: 0.66rem; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  .btn:hover { background: var(--hover); border-color: var(--text-muted); color: var(--text); }
+  .btn.primary { color: var(--accent); border-color: var(--accent); background: var(--hover-accent); }
+  .btn-row { display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center; }
+  .presets { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.4rem; }
+  .preset { text-align: left; border: 1px solid var(--nav-border); border-radius: 6px; background: var(--surface); padding: 0.45rem 0.55rem; cursor: pointer; display: flex; flex-direction: column; gap: 0.15rem; }
+  .preset:hover { border-color: var(--text-muted); background: var(--hover); }
+  .preset.selected { border-color: var(--accent); background: var(--hover-accent); }
+  .preset b { font-size: 0.7rem; }
+  .preset span { font-size: 0.6rem; color: var(--text-muted); line-height: 1.4; }
+
+  /* Notices */
+  .note { border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.66rem; line-height: 1.5; display: flex; gap: 0.5rem; align-items: flex-start; }
+  .note b.lv { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.05rem 0.3rem; border-radius: 3px; flex-shrink: 0; margin-top: 0.12rem; }
+  .note.stop { background: var(--stop-bg); color: var(--stop-text); } .note.stop b.lv { background: var(--stop-text); color: var(--stop-bg); }
+  .note.warn { background: var(--warn-bg); color: var(--warn-text); } .note.warn b.lv { background: var(--warn-text); color: var(--warn-bg); }
+  .note.info { background: var(--updated-bg); color: var(--updated-text); } .note.info b.lv { background: var(--updated-text); color: var(--updated-bg); }
+  .note.ok { background: var(--added-bg); color: var(--added-text); } .note.ok b.lv { background: var(--added-text); color: var(--added-bg); }
+  .note code { background: transparent; padding: 0; }
+  .notes { display: flex; flex-direction: column; gap: 0.4rem; }
+
+  /* Output panel */
+  .tabs { display: flex; border-bottom: 1px solid var(--nav-border); overflow-x: auto; flex-shrink: 0; }
+  .tab { flex: 1 1 auto; white-space: nowrap; padding: 0.55rem 0.55rem; font-size: 0.68rem; font-weight: 600; color: var(--text-muted); background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 0.3rem; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab .cnt { font-size: 0.55rem; font-family: var(--mono); padding: 0 0.3rem; border-radius: 8px; background: var(--badge-bg); color: var(--text-muted); }
+  .tab .cnt.stop { background: var(--stop-text); color: var(--stop-bg); } .tab .cnt.warn { background: var(--warn-text); color: var(--warn-bg); }
+  .pane { flex: 1; overflow: auto; padding: 0.8rem 0.9rem 2rem; display: none; flex-direction: column; gap: 0.6rem; min-height: 0; }
+  .pane.active { display: flex; }
+  .file-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
+  .file-name { font-family: var(--mono); font-size: 0.72rem; font-weight: 600; }
+  pre.code { font-family: var(--mono); font-size: 0.68rem; line-height: 1.6; background: var(--surface); border: 1px solid var(--nav-border); border-radius: 6px; padding: 0.7rem 0.8rem; overflow-x: auto; white-space: pre; tab-size: 2; }
+  pre.code .c { color: var(--tok-com); } pre.code .k { color: var(--tok-kw); } pre.code .s { color: var(--tok-str); }
+  .summary { font-size: 0.76rem; line-height: 1.6; display: flex; flex-direction: column; gap: 0.5rem; }
+  .summary h3 { font-size: 0.66rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-top: 0.4rem; }
+  .summary ul, .summary ol { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.2rem; }
+  .empty-file { font-size: 0.72rem; color: var(--text-muted); border: 1px dashed var(--nav-border); border-radius: 6px; padding: 0.8rem; }
+
+  /* Tables */
+  table { border-collapse: collapse; width: 100%; font-size: 0.64rem; }
+  th, td { text-align: left; padding: 0.28rem 0.45rem; border-bottom: 1px solid var(--nav-border); vertical-align: top; }
+  th { font-weight: 700; color: var(--text-muted); font-size: 0.58rem; text-transform: uppercase; letter-spacing: 0.04em; position: sticky; top: 0; background: var(--surface); }
+  td.path { font-family: var(--mono); word-break: break-all; }
+  .table-wrap { max-height: 26rem; overflow: auto; border: 1px solid var(--nav-border); border-radius: 6px; background: var(--surface); }
+  .st { font-size: 0.55rem; font-weight: 700; padding: 0.02rem 0.3rem; border-radius: 3px; white-space: nowrap; }
+  .st.pub { background: var(--added-bg); color: var(--added-text); } .st.exc { background: var(--badge-bg); color: var(--text-muted); }
+  .st.hid { background: var(--updated-bg); color: var(--updated-text); } .st.skip { background: var(--warn-bg); color: var(--warn-text); }
+  .st.stop { background: var(--stop-bg); color: var(--stop-text); } .st.flag { background: var(--warn-bg); color: var(--warn-text); }
+  .counts { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+  .count { font-size: 0.62rem; padding: 0.15rem 0.45rem; border-radius: 5px; border: 1px solid var(--nav-border); background: var(--surface); cursor: pointer; color: var(--text-muted); font-weight: 600; }
+  .count.selected { border-color: var(--accent); color: var(--accent); background: var(--hover-accent); }
+  .count b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--bg); font-size: 0.72rem; padding: 0.4rem 0.8rem; border-radius: 6px; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 50; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 1180px) { .layout { grid-template-columns: minmax(0, 1fr) minmax(0, 48%); } .index { display: none; } }
+  @media (max-width: 820px) {
+    body { overflow: auto; }
+    .layout { display: block; height: auto; }
+    .form { overflow: visible; padding: 0.8rem 16px 1.5rem; }
+    .out { border-left: none; border-top: 1px solid var(--nav-border); }
+    .pane { overflow: visible; padding: 0.8rem 16px 2rem; }
+    .top { height: auto; min-height: 48px; flex-wrap: wrap; row-gap: 0.35rem; padding: 0.45rem 16px; } .top .chip.hide-sm, .top-space { display: none; }
+    #themeTrack { width: 100%; } #themeTrack .opt { flex: 1 0 0 !important; }
+    .table-wrap { max-height: 20rem; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="top-title">Repo Pages setup</span>
+  <span class="chip hide-sm" id="ruleStamp"></span>
+  <a class="chip link" href="../">Demo</a>
+  <a class="chip link hide-sm" href="https://github.com/prisant-labs/repo-pages">GitHub</a>
+  <span class="top-space"></span>
+  <div class="track" id="themeTrack" role="group" aria-label="Page theme" style="flex:0 0 auto"></div>
+</header>
+<div class="layout">
+  <nav class="index" id="index" aria-label="Sections"></nav>
+  <main class="form" id="form"></main>
+  <section class="out" aria-label="Generated files">
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="pane" id="pane-summary"></div>
+    <div class="pane" id="pane-workflow"></div>
+    <div class="pane" id="pane-config"></div>
+    <div class="pane" id="pane-dependabot"></div>
+    <div class="pane" id="pane-checks"></div>
+    <div class="pane" id="pane-inventory"></div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ═════════════ Real rules, copied from the repository. tests/run_setup_checks.mjs compares them with the code ═════════════ */
+// generator/build_site.py
+const DEFAULT_EXCLUDE = [".github/**", "**/.DS_Store", "**/.gitkeep"];
+const RESERVED = ["index.html", "site-data.json"];
+const VIEWER_DIR = "_viewer";
+const REGULAR_MODES = ["100644", "100755"];
+const CONFIG_FILE = ".github/repo-pages.json";
+const CONFIG_TYPES = [ // [key, JS check, wording from CONFIG_TYPES]
+  ["title", v => typeof v === "string", "a string"],
+  ["description", v => typeof v === "string", "a string"],
+  ["exclude", v => Array.isArray(v) && v.every(p => typeof p === "string"), "a list of strings"],
+  ["includeHidden", v => typeof v === "boolean", "true or false"],
+  ["sandboxHtml", v => typeof v === "boolean", "true or false"]
+];
+// The latest release. After each release, set both values: the tag, and git rev-parse vX.Y.Z^{commit}.
+const RELEASE = { tag: "v1.1.0", sha: "23f18f873e19965fd14d95ff7239b263aeac5dc7" };
+const FIRST_RELEASE = "v1.0.0";
+
+/* ═════════════ The option registry: one entry per option, used by the form, the outputs and the inventory ═════════════ */
+// where: input (action.yml), config (.github/repo-pages.json), workflow (the workflow file), context (facts about the repository, never written),
+//        tool (a choice about this page's output only)
+// since: the release that added an action input. A pinned commit or a fork from before it ignores the input.
+const OPTIONS = [
+  // Repository facts
+  { id: "repo", sec: "repo", where: "context", type: "text", def: "initech/intranet", label: "Repository", hint: "owner/name. Used in the summary and in the action's messages. Never written to a file.", source: "generator/preflight.py" },
+  { id: "repoVis", sec: "repo", where: "context", type: "seg", def: "public", values: [["public", "Public"], ["private", "Private"], ["internal", "Internal"]], label: "Repository visibility", hint: "GitHub reports a repository with internal visibility as private, and the action treats it so.", source: "generator/preflight.py" },
+  { id: "siteVis", sec: "repo", where: "context", type: "seg", def: "public", values: [["public", "Public"], ["private", "Private"], ["unknown", "Not reported"]], label: "GitHub Pages site visibility", hint: "A site is public on the internet unless your plan has private sites (GitHub Enterprise Cloud). Not reported counts as public.", source: "generator/preflight.py, README FAQ" },
+
+  // Action inputs
+  { id: "allowPrivate", sec: "safety", where: "input", key: "allow-private-repository", type: "toggle", def: false, since: "v1.0.0", label: "Publish a private repository to a public site", hint: "allow-private-repository. Anyone on the internet could read every published file.", source: "action.yml" },
+  { id: "requirePrivate", sec: "safety", where: "input", key: "require-private-site", type: "toggle", def: false, since: "v1.1.0", label: "Refuse to deploy unless the site is private", hint: "require-private-site. allow-private-repository does not override it. Runs with deploy off skip the check.", source: "action.yml" },
+  { id: "deploy", sec: "safety", where: "input", key: "deploy", type: "toggle", def: true, since: "v1.0.0", label: "Deploy after building", hint: "deploy. Off builds without publishing and skips the preflight. The pull-request build sets it off for you.", source: "action.yml" },
+
+  // Triggers
+  { id: "branch", sec: "triggers", where: "workflow", type: "text", def: "main", label: "Default branch", hint: "The branch that publishes. Change it if your default branch has another name.", source: "templates/repo-pages.yml" },
+  { id: "push", sec: "triggers", where: "workflow", type: "toggle", def: true, label: "Publish on every push to that branch", source: "templates/repo-pages.yml" },
+  { id: "dispatch", sec: "triggers", where: "workflow", type: "toggle", def: true, label: "Allow a manual run (workflow_dispatch)", source: "templates/repo-pages.yml" },
+  { id: "schedule", sec: "triggers", where: "workflow", type: "toggle", def: false, label: "Rebuild on a schedule", hint: "A site picks up repo-pages fixes only when it rebuilds. This suits a repository that rarely changes.", source: "templates/repo-pages.yml (commented line)" },
+  { id: "cron", sec: "triggers", where: "workflow", type: "text", def: "0 6 * * 1", sub: true, show: s => s.schedule, label: "Cron (UTC)", hint: "The template's line rebuilds every Monday at 06:00 UTC.", source: "templates/repo-pages.yml" },
+  { id: "pr", sec: "triggers", where: "workflow", type: "toggle", def: false, label: "Build pull requests without publishing", hint: "Adds a build-only job with deploy off, read-only permissions and no environment, as this repository's own demo.yml does.", source: ".github/workflows/demo.yml, action.yml (deploy)" },
+  { id: "workflowRun", sec: "triggers", where: "workflow", type: "toggle", def: false, label: "Rebuild after a bot's workflow", hint: "A commit pushed with GITHUB_TOKEN starts no other workflow, so a bot's commit does not rebuild the site.", source: "README FAQ" },
+  { id: "workflowRunNames", sec: "triggers", where: "workflow", type: "text", def: "Changelog", sub: true, show: s => s.workflowRun, label: "Bot workflow names", hint: "The name: line of each bot workflow, comma separated.", source: "README FAQ" },
+
+  // Version
+  { id: "pin", sec: "version", where: "workflow", type: "seg", def: "v1", values: [["v1", "Follow @v1"], ["sha", "Pin a commit"], ["fork", "Your fork"]], label: "Which version runs", hint: "@v1 takes each v1 release on the next rebuild. A pinned commit changes only when you accept it.", source: "README Get updates" },
+  { id: "sha", sec: "version", where: "workflow", type: "text", def: RELEASE.sha, sub: true, show: s => s.pin === "sha", label: "Full commit SHA", hint: `Prefilled with the ${RELEASE.tag} commit. Check the releases page for a newer one.`, source: "git rev-parse of the release tag" },
+  { id: "shaLabel", sec: "version", where: "workflow", type: "text", def: RELEASE.tag, sub: true, show: s => s.pin === "sha", label: "Version comment", hint: "Written after the SHA, so Dependabot and readers know which release it is.", source: "README Get updates" },
+  { id: "forkRepo", sec: "version", where: "workflow", type: "text", def: "initech/repo-pages", sub: true, show: s => s.pin === "fork", label: "Fork (owner/name)", source: "README Get updates" },
+  { id: "forkRef", sec: "version", where: "workflow", type: "text", def: "v1", sub: true, show: s => s.pin === "fork", label: "Fork ref (tag, branch or SHA)", source: "README Get updates" },
+  { id: "dependabot", sec: "version", where: "workflow", type: "toggle", def: false, show: s => s.pin === "sha", label: "Add a Dependabot file for action updates", hint: "Writes .github/dependabot.yml, so each release arrives as a pull request. Merge it into an existing file if you have one.", source: "README Get updates" },
+
+  // Site content (config keys)
+  { id: "title", sec: "content", where: "config", key: "title", type: "text", def: "", label: "Site title", hint: "Defaults to the repository's name. An empty title also falls back to it.", source: "generator/build_site.py CONFIG_TYPES" },
+  { id: "description", sec: "content", where: "config", key: "description", type: "text", def: "", label: "Description", hint: "Shown under the title on the home page.", source: "generator/build_site.py CONFIG_TYPES" },
+  { id: "exclude", sec: "content", where: "config", key: "exclude", type: "list", def: [], label: "Exclude patterns", hint: "One per line. ** spans folders, * and ? stay inside one folder, and every pattern matches the whole path from the root. Added to the defaults .github/**, **/.DS_Store and **/.gitkeep.", source: "generator/build_site.py glob_to_regex" },
+  { id: "includeHidden", sec: "content", where: "config", key: "includeHidden", type: "toggle", def: false, label: "Publish hidden files", hint: "includeHidden. Files and folders whose names start with a dot. .github/** stays excluded either way.", source: "generator/build_site.py is_published" },
+  { id: "sandboxHtml", sec: "content", where: "config", key: "sandboxHtml", type: "toggle", def: false, label: "Sandbox HTML pages", hint: "sandboxHtml. HTML then runs in the viewer with no access to the site's origin. Turn it on for HTML you do not fully trust.", source: "SECURITY.md, viewer/index.html renderFile" },
+  { id: "writeAll", sec: "content", where: "tool", type: "toggle", def: false, label: "Write every key, even at its default", hint: "Off writes only the keys you changed. On writes the full object, as the README example does.", source: "this page" },
+
+  // Advanced workflow
+  { id: "wfName", sec: "advanced", where: "workflow", type: "text", def: "Repo Pages", label: "Workflow name", hint: "Shown in the Actions tab. The README and agent prompt refer to \"Repo Pages\".", source: "templates/repo-pages.yml" },
+  { id: "runner", sec: "advanced", where: "workflow", type: "text", def: "ubuntu-latest", label: "Runner (runs-on)", hint: "Tested on ubuntu-latest. Needs python3 3.10 or later and bash.", source: "README FAQ" },
+  { id: "timeout", sec: "advanced", where: "workflow", type: "number", def: 15, min: 1, max: 360, label: "Timeout (minutes)", source: "templates/repo-pages.yml" },
+  { id: "environment", sec: "advanced", where: "workflow", type: "toggle", def: true, label: "Use the github-pages environment", hint: "The deploy works without it, but deploy-pages recommends it and it puts the site's URL on the run page.", source: "docs/architecture.md" },
+  { id: "concurrencyGroup", sec: "advanced", where: "workflow", type: "text", def: "repo-pages", label: "Concurrency group", hint: "Only one deploy runs at a time. A newer waiting run replaces an older waiting one.", source: "templates/repo-pages.yml" },
+  { id: "cancelInProgress", sec: "advanced", where: "workflow", type: "toggle", def: false, label: "Cancel a deploy that is already running", source: "templates/repo-pages.yml" },
+  { id: "permissions", sec: "advanced", where: "workflow", type: "fixed", def: "contents: read\npages: write\nid-token: write", label: "Permissions", hint: "Fixed. A composite action cannot set permissions, so the calling job carries them. The deploy needs pages: write and id-token: write.", source: "templates/repo-pages.yml, docs/architecture.md" },
+  { id: "token", sec: "advanced", where: "input", key: "token", type: "text", def: "", since: "v1.0.0", label: "Token secret name", hint: "Empty uses github.token, the default. Enter a secret's name only, never its value. The page writes ${{ secrets.NAME }}.", source: "action.yml" }
+];
+const BY_ID = Object.fromEntries(OPTIONS.map(o => [o.id, o]));
+const SECTIONS = [
+  ["start", "Start"], ["repo", "Repository"], ["safety", "Privacy and deploy"], ["triggers", "When it runs"], ["version", "Version and updates"],
+  ["content", "Site content"], ["files", "What gets published"], ["advanced", "Advanced workflow"]
+];
+const SEC_LEDE = {
+  start: "Pick a preset, or import an existing .github/repo-pages.json. Presets reset every option first. Example data is the fictional Initech sample.",
+  repo: "Facts about the repository. The page uses them to predict what the action's preflight will do. They are not written to any file.",
+  safety: "Action inputs. Each one is written under with: only when it differs from its default.",
+  triggers: "The on: block of .github/workflows/repo-pages.yml.",
+  version: "How the workflow refers to the action, and how updates reach it.",
+  content: "Keys in .github/repo-pages.json. The file is never published. The generator refuses a value of the wrong type rather than coercing it.",
+  files: "Paste the output of git ls-files, or better, git ls-files -s, which shows symlinks and submodules. Every path is classified with the generator's own rules, in the generator's order.",
+  advanced: "Workflow details the template fixes. Change them only with a reason."
+};
+
+/* ═════════════ State ═════════════ */
+const defaults = () => Object.fromEntries(OPTIONS.map(o => [o.id, Array.isArray(o.def) ? o.def.slice() : o.def]));
+let S = defaults();
+let preserved = {}; // unknown keys from an imported file, re-emitted as they were
+let presetId = "template";
+let fileFilter = "all";
+let lastImportError = "";
+
+/* ═════════════ Helpers ═════════════ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1600); }
+function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* storage blocked: the page still works */ } }
+
+// Python's json.dumps with default settings: ", " and ": " separators, non-ASCII escaped.
+function pyDumps(v) {
+  if (v === null) return "null";
+  if (v === true) return "true";
+  if (v === false) return "false";
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : String(v); // 1.0 cannot be told from 1 after JSON.parse
+  if (typeof v === "string") return JSON.stringify(v).replace(/[\u007f-￿]/g, c => "\\u" + c.charCodeAt(0).toString(16).padStart(4, "0"));
+  if (Array.isArray(v)) return "[" + v.map(pyDumps).join(", ") + "]";
+  return "{" + Object.entries(v).map(([k, x]) => pyDumps(k) + ": " + pyDumps(x)).join(", ") + "}";
+}
+const pyTypeName = v => v === null ? "NoneType" : Array.isArray(v) ? "list" : typeof v === "string" ? "str" : typeof v === "boolean" ? "bool" : typeof v === "number" ? (Number.isInteger(v) ? "int" : "float") : "dict";
+
+// generator/build_site.py check_config, in its order. The generator stops at the first error; this returns all of them.
+function checkConfig(cfg, name) {
+  if (cfg === null || typeof cfg !== "object" || Array.isArray(cfg)) return [`${name} must hold a JSON object, not ${pyTypeName(cfg)}.`];
+  const errs = [];
+  for (const [key, ok, wanted] of CONFIG_TYPES) if (key in cfg && !ok(cfg[key])) errs.push(`${name}: "${key}" must be ${wanted}, not ${pyDumps(cfg[key])}.`);
+  return errs;
+}
+
+// generator/build_site.py glob_to_regex: gitignore-style, ** spans folders, * and ? stay inside one, anchored at both ends.
+function globToRegex(pattern) {
+  const cps = Array.from(pattern); let out = "", i = 0;
+  const at = (s) => cps.slice(i, i + s.length).join("") === s;
+  while (i < cps.length) {
+    if (at("**/")) { out += "(?:.*/)?"; i += 3; }
+    else if (at("**")) { out += ".*"; i += 2; }
+    else if (cps[i] === "*") { out += "[^/]*"; i += 1; }
+    else if (cps[i] === "?") { out += "[^/]"; i += 1; }
+    else { out += cps[i].replace(/[.*+?^${}()|[\]\\\/]/g, "\\$&"); i += 1; }
+  }
+  return new RegExp("^" + out + "$", "u");
+}
+const isHidden = p => p.split("/").some(seg => seg.startsWith("."));
+
+// Lint a user pattern for the mistakes gitignore habits cause.
+function lintPattern(p) {
+  const out = [];
+  if (p === "") out.push("An empty pattern matches nothing.");
+  if (p.startsWith("/")) out.push(`Paths have no leading slash, so this never matches. Try "${p.replace(/^\/+/, "")}".`);
+  if (p.endsWith("/")) out.push(`A pattern must match a file path, so a trailing slash never matches. Try "${p}**".`);
+  if (p.startsWith("!")) out.push("Negation is not supported. The ! is matched as a literal character.");
+  if (/[\[\]]/.test(p)) out.push("Character classes are not supported. [ and ] are matched literally.");
+  if (p.includes("\\")) out.push("A backslash is matched literally. Use / between folders.");
+  if (!p.includes("/") && /\*/.test(p) && !p.startsWith("**")) out.push(`Without a folder, * stays at the top level, unlike .gitignore. Try "**/${p}" to match it in every folder.`);
+  if (p && !/[*?/]/.test(p) && !p.includes(".")) out.push(`This matches only a top-level file named exactly "${p}". For a folder, try "${p}/**".`);
+  if (p === "**" || p === "**/*") out.push("This excludes every file.");
+  return out;
+}
+
+/* ═════════════ Inputs that need validation ═════════════ */
+const YAML_PLAIN = /^[A-Za-z0-9][A-Za-z0-9 _.\/-]*$/;
+const YAML_SPECIAL = /^(true|false|yes|no|on|off|y|n|null|~)$/i;
+function yScalar(s) { return YAML_PLAIN.test(s) && !YAML_SPECIAL.test(s) && !/^[0-9.+-]+$/.test(s) && !/\s$/.test(s) && !s.includes(" #") ? s : "'" + s.replace(/'/g, "''") + "'"; }
+function fieldError(id, s) {
+  const v = s[id];
+  switch (id) {
+    case "repo": return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(v) ? "" : "Use owner/name.";
+    case "branch": return !v.trim() ? "A branch name is needed." : /[\s~^:\\]|\.\.|@\{|^\/|\/$|\.lock$/.test(v) ? "This is not a valid git branch name." : "";
+    case "cron": { const f = v.trim().split(/\s+/); return f.length === 5 && f.every(x => /^[\d*\/,A-Za-z-]+$/.test(x)) ? "" : "A cron line has five fields: minute, hour, day of month, month, day of week."; }
+    case "workflowRunNames": return v.split(",").map(x => x.trim()).filter(Boolean).length ? "" : "Name at least one workflow.";
+    case "sha": return /^[0-9a-f]{40}$/.test(v) ? "" : "A full commit SHA is 40 lowercase hex characters. A short SHA or a tag is not a pin.";
+    case "shaLabel": return /^[\w.\-]*$/.test(v) ? "" : "Letters, digits, dots and dashes only.";
+    case "forkRepo": return /^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/.test(v) ? "" : "Use owner/name.";
+    case "forkRef": return /^[\w.\/-]+$/.test(v) ? "" : "Letters, digits, dots, dashes and slashes only.";
+    case "wfName": return v.trim() ? "" : "A workflow needs a name.";
+    case "runner": return /^[\w.\-]+$/.test(v) ? "" : "One runner label, such as ubuntu-latest.";
+    case "timeout": return Number.isInteger(v) && v >= 1 && v <= 360 ? "" : "A whole number from 1 to 360.";
+    case "concurrencyGroup": return /^[\w.\-]+$/.test(v) ? "" : "Letters, digits, dots and dashes only.";
+    case "token": return v === "" || (/^[A-Za-z_][A-Za-z0-9_]*$/.test(v) && !/^GITHUB_/i.test(v)) ? "" : "A secret name: letters, digits and underscores, not starting with GITHUB_. Never paste the token itself.";
+    default: return "";
+  }
+}
+const active = (o, s) => !o.show || o.show(s);
+const fieldErrors = s => OPTIONS.filter(o => active(o, s)).map(o => [o.id, fieldError(o.id, s)]).filter(([, e]) => e);
+
+/* ═════════════ Generated files ═════════════ */
+function usesLine(s) {
+  if (s.pin === "sha") return `prisant-labs/repo-pages@${s.sha}` + (s.shaLabel ? ` # ${s.shaLabel}` : "");
+  if (s.pin === "fork") return `${s.forkRepo}@${s.forkRef}`;
+  return "prisant-labs/repo-pages@v1";
+}
+function inputLines(s, indent) {
+  const L = [];
+  if (!s.deploy) L.push(["# Builds the site without publishing it.", "deploy: 'false'"]);
+  if (s.allowPrivate) L.push(["# Publishes this private repository even when its site is public on the internet.", "allow-private-repository: 'true'"]);
+  if (s.requirePrivate) L.push(["# Stops every deploy while the GitHub Pages site is public.", "require-private-site: 'true'"]);
+  if (s.token) L.push([null, "token: ${{ secrets." + s.token + " }}"]);
+  if (!L.length) return [indent + "# Uncomment to stop every deploy while the GitHub Pages site is public.", indent + "# with:", indent + "#   require-private-site: 'true'"];
+  const out = [indent + "with:"];
+  for (const [c, line] of L) { if (c) out.push(indent + "  " + c); out.push(indent + "  " + line); }
+  return out;
+}
+function buildWorkflow(s) {
+  const b = yScalar(s.branch), L = [];
+  L.push("# Publishes this repository as a repo-pages site on GitHub Pages.");
+  L.push("# Copy this file to .github/workflows/repo-pages.yml in the repository you want to publish.");
+  L.push("# https://github.com/prisant-labs/repo-pages");
+  L.push("#");
+  L.push('# Before the first run, set Settings > Pages > Source to "GitHub Actions".');
+  L.push(s.branch === "main" ? '# Change "main" below if your default branch has another name.' : `# This workflow publishes from the "${s.branch}" branch.`);
+  L.push("name: " + yScalar(s.wfName));
+  L.push("");
+  L.push("on:");
+  if (s.push) { L.push("  push:"); L.push(`    branches: [${b}]`); }
+  if (s.pr) { L.push("  pull_request:"); L.push(`    branches: [${b}]`); }
+  if (s.dispatch) L.push("  workflow_dispatch:");
+  if (s.schedule) {
+    L.push("  # A site only picks up repo-pages fixes when it rebuilds. This line rebuilds it on a schedule.");
+    L.push(`  schedule: [{ cron: '${s.cron.trim().replace(/\s+/g, " ")}' }]`);
+  } else {
+    L.push("  # A site only picks up repo-pages fixes when it rebuilds. Uncomment this line");
+    L.push("  # to rebuild every Monday, which suits a repository that rarely changes.");
+    L.push("  # schedule: [{ cron: '0 6 * * 1' }]");
+  }
+  if (s.workflowRun) {
+    const names = s.workflowRunNames.split(",").map(x => x.trim()).filter(Boolean).map(yScalar);
+    L.push("  # Rebuilds after these workflows, whose commits do not start this one.");
+    L.push("  workflow_run:"); L.push(`    workflows: [${names.join(", ")}]`); L.push("    types: [completed]"); L.push(`    branches: [${b}]`);
+  }
+  L.push("");
+  const perms = ["contents: read", "pages: write", "id-token: write"];
+  const conc = [`group: ${s.concurrencyGroup}`, `cancel-in-progress: ${s.cancelInProgress}`];
+  if (!s.pr) {
+    L.push("permissions:"); perms.forEach(p => L.push("  " + p)); L.push("");
+    L.push("concurrency:"); conc.forEach(c => L.push("  " + c)); L.push("");
+  } else {
+    L.push("# Each job sets its own permissions. Pull-request builds only read the repository.");
+    L.push("permissions:"); L.push("  contents: read"); L.push("");
+  }
+  L.push("jobs:");
+  L.push("  publish:");
+  const conds = [];
+  if (s.pr) conds.push("github.event_name != 'pull_request'");
+  if (s.workflowRun) conds.push("(github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success')");
+  if (conds.length) L.push("    if: " + (conds.length === 1 ? conds[0].replace(/^\((.*)\)$/, "$1") : conds.join(" && ")));
+  L.push("    runs-on: " + s.runner);
+  L.push("    timeout-minutes: " + s.timeout);
+  if (s.pr) {
+    L.push("    permissions:"); perms.forEach(p => L.push("      " + p));
+    L.push("    # Kept on this job, so a pull-request build cannot replace a waiting deploy.");
+    L.push("    concurrency:"); conc.forEach(c => L.push("      " + c));
+  }
+  if (s.environment) { L.push("    environment:"); L.push("      name: github-pages"); L.push("      url: ${{ steps.site.outputs.page_url }}"); }
+  L.push("    steps:");
+  L.push("      - id: site");
+  L.push("        uses: " + usesLine(s));
+  inputLines(s, "        ").forEach(l => L.push(l));
+  if (s.pr) {
+    L.push("");
+    L.push("  # Builds pull requests without publishing, so a broken build shows before the merge.");
+    L.push("  build:");
+    L.push("    if: github.event_name == 'pull_request'");
+    L.push("    runs-on: " + s.runner);
+    L.push("    timeout-minutes: " + s.timeout);
+    L.push("    concurrency:"); L.push("      group: " + s.concurrencyGroup + "-pr-${{ github.ref }}"); L.push("      cancel-in-progress: true");
+    L.push("    steps:");
+    L.push("      - uses: " + usesLine(s));
+    L.push("        with:");
+    L.push("          deploy: 'false'");
+  }
+  return L.join("\n") + "\n";
+}
+function buildDependabot(s) {
+  if (s.pin !== "sha" || !s.dependabot) return "";
+  return ["# Opens a pull request when a pinned action has a new release.", "version: 2", "updates:", "  - package-ecosystem: github-actions", "    directory: /", "    schedule:", "      interval: weekly", ""].join("\n");
+}
+function configObject(s) {
+  const o = {};
+  const put = (k, v, d) => { if (s.writeAll || !same(v, d)) o[k] = v; };
+  if (s.title) o.title = s.title; // an empty title falls back to the repository's name, so "" is never written
+  put("description", s.description, "");
+  put("exclude", cleanExclude(s.exclude), []);
+  put("includeHidden", s.includeHidden, false);
+  put("sandboxHtml", s.sandboxHtml, false);
+  // Unknown keys from an import go back unchanged, because the generator ignores them.
+  for (const [k, v] of Object.entries(preserved)) if (!(k in o)) o[k] = v;
+  return o;
+}
+const cleanExclude = list => list.map(p => p.trim()).filter(p => p !== "");
+function formatJson(o) {
+  const ind = n => "  ".repeat(n);
+  const val = (v, n) => {
+    if (Array.isArray(v)) { const one = "[" + v.map(x => JSON.stringify(x)).join(", ") + "]"; return one.length <= 70 ? one : "[\n" + v.map(x => ind(n + 1) + JSON.stringify(x)).join(",\n") + "\n" + ind(n) + "]"; }
+    if (v && typeof v === "object") { const e = Object.entries(v); return e.length ? "{\n" + e.map(([k, x]) => ind(n + 1) + JSON.stringify(k) + ": " + val(x, n + 1)).join(",\n") + "\n" + ind(n) + "}" : "{}"; }
+    return JSON.stringify(v);
+  };
+  return val(o, 0) + "\n";
+}
+
+/* ═════════════ Preflight: what the action decides before it builds ═════════════ */
+// generator/preflight.py site_refusal, as released in RELEASE.tag.
+function preflight(s) {
+  const repo = s.repo, settings = `https://github.com/${repo}/settings/pages`;
+  if (!s.deploy) return { ok: true, text: "deploy is off, so the preflight is skipped and nothing is published." };
+  const priv = s.repoVis !== "public", kind = s.repoVis === "internal" ? "This repository has internal visibility, which GitHub counts as private." : "This repository is private.";
+  if (!s.requirePrivate && (!priv || s.allowPrivate)) return { ok: true, text: "Publishes." };
+  if (s.siteVis === "private") return { ok: true, text: "Publishes. The site is private, so no setting is needed." };
+  if (s.requirePrivate) {
+    if (!priv) return { ok: false, text: 'require-private-site is "true", but this repository is public, and a site from a public repository is always public. Nothing was published. Make the repository private or internal, or remove require-private-site.' };
+    if (s.siteVis === "public") return { ok: false, text: `require-private-site is "true", but this repository's GitHub Pages site is public. Nothing was published. Private sites need GitHub Enterprise Cloud, so if your plan has none, remove require-private-site. Otherwise, set GitHub Pages visibility to Private at ${settings}, or run: gh api -X PUT "repos/${repo}/pages" -F public=false` };
+    return { ok: false, text: `require-private-site is "true", but GitHub did not report whether this repository's GitHub Pages site is public. Nothing was published. Check that GitHub Pages visibility is Private at ${settings}. If your GitHub plan has no private sites, remove require-private-site.` };
+  }
+  if (s.siteVis === "public") return { ok: false, text: `${kind} Its GitHub Pages site is public, so anyone on the internet could read it. Nothing was published. Set GitHub Pages visibility to Private at ${settings}, which needs GitHub Enterprise Cloud. To publish it publicly anyway, set allow-private-repository to "true".` };
+  return { ok: false, text: `${kind} GitHub did not report whether its GitHub Pages site is public, so repo-pages treats it as public. Nothing was published. Check GitHub Pages visibility at ${settings}. To publish anyway, set allow-private-repository to "true".` };
+}
+
+/* ═════════════ File list tester ═════════════ */
+const SAMPLE_PLAIN = `CHANGELOG.md
+CONTRIBUTING.md
+README.md
+_archive/README.md
+_archive/cover-sheet-templates.zip
+_archive/initech-1998-handbook.md
+_archive/old-cover-sheet.md
+data/README.md
+data/cubicle-map.json
+data/employees.json
+data/stapler-requisitions.csv
+data/systems.yaml
+data/tps-reports-filed.csv
+forms/README.md
+forms/requisition-form.html
+forms/requisition-form.md
+forms/tps-cover-sheet.pdf
+handbook/README.md
+handbook/benefits/benefits-overview.md
+handbook/benefits/dental-plan.yaml
+handbook/dress-code.md
+handbook/holidays.csv
+handbook/org-chart.md
+handbook/parking.md
+handbook/policies/README.md
+handbook/policies/birthday-cake.md
+handbook/policies/desk-relocation.md
+handbook/policies/office-supplies.md
+handbook/policies/saturday-work.md
+handbook/policies/tps-reports.md
+handbook/welcome-to-initech.md
+media/cubicle-wall.png
+media/initech-logo.svg
+media/office-floor-plan.svg
+media/org-chart.svg
+media/stapler.svg
+memos/README.md
+memos/_drafts/reply-to-lumbergh-unsent.md
+memos/from-bill-lumbergh/hawaiian-shirt-day.md
+memos/from-bill-lumbergh/new-cover-sheets.md
+memos/from-bill-lumbergh/re stapler (final).md
+memos/from-bill-lumbergh/saturday-coverage.md
+memos/from-the-bobs/efficiency-review-kickoff.md
+memos/from-the-bobs/interview-schedule.csv
+neighbors/chotchkies/README.md
+neighbors/chotchkies/flair-policy.md
+neighbors/chotchkies/menu.csv
+projects/README.md
+projects/jump-to-conclusions-mat/jump-to-conclusions-mat.html
+projects/jump-to-conclusions-mat/jump-to-conclusions-mat.md
+projects/jump-to-conclusions-mat/market-sizing.csv
+projects/jump-to-conclusions-mat/mat-layout.svg
+projects/jump-to-conclusions-mat/pitch.md
+projects/rounding-incident/ledger-sample.csv
+projects/rounding-incident/postmortem.md
+projects/rounding-incident/reconcile.sql
+projects/y2k-remediation/README.md
+projects/y2k-remediation/affected-systems.csv
+projects/y2k-remediation/date_window.py
+projects/y2k-remediation/deploy.sh
+projects/y2k-remediation/find_two_digit_years.sql
+projects/y2k-remediation/notes/runbook.md
+projects/y2k-remediation/notes/standups/day-01.md
+projects/y2k-remediation/notes/standups/day-02.md
+projects/y2k-remediation/notes/standups/day-03.md
+projects/y2k-remediation/notes/standups/day-04.md
+projects/y2k-remediation/notes/standups/day-05.md
+projects/y2k-remediation/notes/standups/day-06.md
+projects/y2k-remediation/plan.md
+projects/y2k-remediation/status-report.md
+projects/y2k-remediation/test_date_window.py
+teams/README.md
+teams/accounting/README.md
+teams/accounting/expense-codes.csv
+teams/facilities/README.md
+teams/facilities/basement-storage-room-b.md
+teams/facilities/fire-drill.md
+teams/facilities/stapler-inventory.csv
+teams/software/README.md
+teams/software/on-call.md
+teams/software/printer-error-codes.json
+teams/software/printer-incident-report.md
+teams/software/team.yaml
+tools/Makefile
+tools/README.md
+tools/cover-sheet.css
+tools/cover_sheet.js
+tools/tps_report.py`;
+// The same sample with modes, plus made-up traps. The trap paths are not in examples/initech.
+const TRAPS = [
+  ["100644", ".github/workflows/repo-pages.yml"], ["100644", ".github/repo-pages.json"], ["100644", ".gitignore"], ["100644", ".env"],
+  ["100644", "teams/software/.secrets/printer-admin.txt"], ["100644", "media/.gitkeep"], ["100644", "tools/.DS_Store"],
+  ["100644", "index.html"], ["100644", "site-data.json"], ["100644", "_viewer/notes.md"],
+  ["100644", "teams/software/deploy-key.pem"], ["100644", "teams/software/credentials.json"],
+  ["120000", "handbook/latest-policy.md"], ["160000", "vendor/flair-tracker"],
+  ["100644", "memos/drafts/q3-layoffs-confidential.md"], ["100644", "\"handbook/caf\\303\\251-menu.md\""]
+];
+function fakeSha(i) { let h = (i * 2654435761) >>> 0, out = ""; for (let k = 0; k < 5; k++) { h = (h * 1103515245 + 12345) >>> 0; out += h.toString(16).padStart(8, "0"); } return out; }
+const SAMPLE_MODES = SAMPLE_PLAIN.split("\n").map(p => ["100644", p]).concat(TRAPS).map(([m, p], i) => `${m} ${fakeSha(i + 1)} 0\t${p}`).join("\n");
+
+// git quotes unusual paths as "..." with C escapes unless core.quotepath=off.
+function unquoteC(q) {
+  const body = q.slice(1, -1), bytes = [];
+  for (let i = 0; i < body.length; i++) {
+    const c = body[i];
+    if (c !== "\\") { const enc = new TextEncoder().encode(c); enc.forEach(x => bytes.push(x)); continue; }
+    const n = body[i + 1];
+    if (/[0-7]/.test(n)) { bytes.push(parseInt(body.substr(i + 1, 3), 8)); i += 3; continue; }
+    const map = { n: 10, t: 9, r: 13, '"': 34, "\\": 92, a: 7, b: 8, f: 12, v: 11 };
+    bytes.push(map[n] !== undefined ? map[n] : n.charCodeAt(0)); i += 1;
+  }
+  return new TextDecoder().decode(new Uint8Array(bytes));
+}
+function parseList(text) {
+  const rows = [], meta = { quoted: 0, modes: 0, plain: 0 };
+  for (const raw of text.split(/\r?\n/)) {
+    if (!raw.trim()) continue;
+    let mode = null, path = raw;
+    const m = raw.match(/^(\d{6}) [0-9a-f]{7,64} \d\t(.+)$/);
+    if (m) { mode = m[1]; path = m[2]; meta.modes++; } else meta.plain++;
+    if (/^".*"$/.test(path)) { path = unquoteC(path); meta.quoted++; }
+    rows.push({ path, mode });
+  }
+  return { rows, meta };
+}
+const SECRET_RULES = [
+  [/(^|\/)\.env(\.|$)/i, "an environment file"], [/\.(pem|key|p12|pfx|jks|keystore|kdbx|ppk|gpg|asc)$/i, "a key or keystore"],
+  [/(^|\/)id_(rsa|dsa|ecdsa|ed25519)(\.pub)?$/, "an SSH key"], [/(^|\/)[^/]*(credential|secret|password|passwd|token|service[-_]?account)[^/]*$/i, "a credential"],
+  [/(^|\/)\.?(npmrc|pypirc|netrc|htpasswd|git-credentials)$/i, "a credentials file"], [/\.(tfstate|tfvars)$/i, "Terraform state"], [/\.(sqlite3?|dump|bak)$/i, "a database or backup"]
+];
+const PRIVATE_RULES = [/(^|\/|[-_])(draft|drafts|unsent|private|confidential|personal|wip)([-_.\/]|$)/i];
+function classify(rows, s) {
+  const pats = DEFAULT_EXCLUDE.map(p => ({ p, re: globToRegex(p), def: true, hits: 0 })).concat(cleanExclude(s.exclude).map(p => ({ p, re: globToRegex(p), def: false, hits: 0, lint: lintPattern(p) })));
+  const out = rows.map(({ path, mode }) => {
+    const r = { path, mode, status: "pub", reason: "", flags: [] };
+    if (mode && !REGULAR_MODES.includes(mode)) { r.status = "skip"; r.reason = mode === "120000" ? "Symlink: skipped, because copying it would publish its target" : mode === "160000" ? "Submodule: skipped, it has no content here" : `Mode ${mode}: not a regular file`; return r; }
+    if (!s.includeHidden && isHidden(path)) { const seg = path.split("/").find(x => x.startsWith(".")); r.status = "hid"; r.reason = `Hidden: "${seg}" starts with a dot`; return r; }
+    const hit = pats.find(x => x.re.test(path));
+    if (hit) { pats.forEach(x => { if (x.re.test(path)) x.hits++; }); r.status = "exc"; r.reason = `Excluded by ${hit.def ? "the default" : "your"} pattern ${hit.p}`; return r; }
+    if (RESERVED.includes(path) || path.startsWith(VIEWER_DIR + "/")) { r.status = "stop"; r.reason = "Collides with the viewer's own paths, so the build stops"; }
+    SECRET_RULES.forEach(([re, what]) => { if (re.test(path)) r.flags.push(`Looks like ${what}`); });
+    if (PRIVATE_RULES.some(re => re.test(path))) r.flags.push("Looks like a private note or draft");
+    if (/\.html?$/i.test(path) && !s.sandboxHtml) r.flags.push("HTML runs on the site's origin");
+    if (r.flags.length && r.status === "pub") r.status = "flag";
+    return r;
+  });
+  return { out, pats };
+}
+let LIST_TEXT = "";
+
+/* ═════════════ Checks: warnings computed from the whole setup ═════════════ */
+function checks(s, files) {
+  const C = [], add = (lv, html) => C.push({ lv, html });
+  fieldErrors(s).forEach(([id, e]) => add("stop", `<b>${esc(BY_ID[id].label)}:</b> ${esc(e)}`));
+  if (!s.push && !s.dispatch && !s.schedule && !s.workflowRun && !s.pr) add("stop", "No trigger is on, so the workflow never runs.");
+  if (!s.push && !s.dispatch && !s.schedule && !s.workflowRun && s.pr) add("warn", "Only pull requests start this workflow, and they never publish.");
+  const pf = preflight(s);
+  if (!pf.ok) add("stop", `<b>The action will refuse to publish.</b> Its message: “${esc(pf.text)}”`);
+  const latest = s.pin === "v1" || (s.pin === "sha" && s.sha === RELEASE.sha);
+  if (!latest) OPTIONS.filter(o => o.since && o.since !== FIRST_RELEASE && !same(s[o.id], o.def)).forEach(o => add("warn", `<b>${esc(o.key)} needs repo-pages ${esc(o.since)} or later.</b> A pinned commit or a fork from before that release ignores the input${o.id === "requirePrivate" ? ", and then nothing checks the site's visibility" : ""}.`));
+  if (s.allowPrivate && s.repoVis !== "public" && s.siteVis !== "private") add("stop", "<b>A private repository will publish to a site that is public on the internet.</b> Anyone can read every published file, every commit subject and every author name.");
+  if (s.allowPrivate && s.repoVis === "public") add("info", "allow-private-repository has no effect on a public repository.");
+  if (s.requirePrivate && s.repoVis === "public") add("warn", "require-private-site always refuses a public repository, because its site is always public.");
+  if (!s.deploy) add("warn", "deploy is off on the publish job, so this workflow never publishes.");
+  if (s.schedule && s.pin !== "v1") add("info", "A pinned workflow does not pick up fixes on a scheduled rebuild. The schedule only helps @v1, or a site whose content changes.");
+  if (s.pin === "v1" && !s.schedule) add("info", "A quiet repository rebuilds rarely, so @v1 fixes reach it late. Turn on the schedule if this repository changes less than weekly.");
+  if (s.pin === "sha" && !s.dependabot) add("info", "A pinned commit changes only when you update it. Add the Dependabot file to hear about releases.");
+  if (s.pin === "sha" && s.sha !== RELEASE.sha && !fieldError("sha", s)) add("info", `This page cannot check that the SHA is a repo-pages release. It knows only ${esc(RELEASE.tag)}, and its preflight prediction follows that release.`);
+  if (s.pin === "fork") add("warn", "A fork runs code you maintain. The preflight and generator are whatever your fork holds.");
+  if (s.cancelInProgress) add("warn", "Cancel in progress can stop a deploy halfway. The template keeps it off.");
+  if (!s.environment) add("info", "Without the github-pages environment, the run page does not link to the site.");
+  if (s.runner !== "ubuntu-latest") add("warn", "repo-pages is tested on ubuntu-latest only. The runner needs python3 3.10 or later and bash.");
+  if (s.token) add("info", `The token comes from the secret ${esc(s.token)}. The default github.token is enough for a normal setup.`);
+  if (s.token && s.pr) add("info", "Pull-request builds use github.token, because secrets are empty on a pull request from a fork, and a build that publishes nothing needs no other token.");
+  if (s.includeHidden) add("warn", "includeHidden publishes every tracked dotfile except .github/**, such as .env or .npmrc if they are tracked.");
+  const pats = cleanExclude(s.exclude);
+  pats.forEach(p => lintPattern(p).forEach(m => add("warn", `Pattern <code>${esc(p)}</code>: ${esc(m)}`)));
+  const dup = pats.filter((p, i) => pats.indexOf(p) !== i); if (dup.length) add("info", `Duplicate patterns: ${dup.map(p => `<code>${esc(p)}</code>`).join(", ")}.`);
+  if (files) {
+    const { out, pats: ps } = files;
+    const stop = out.filter(r => r.status === "stop"); if (stop.length) add("stop", `The build stops: ${stop.map(r => `<code>${esc(r.path)}</code>`).join(", ")} collide${stop.length === 1 ? "s" : ""} with the viewer's own paths. Exclude or rename ${stop.length === 1 ? "it" : "them"}.`);
+    const sec = out.filter(r => (r.status === "flag" || r.status === "stop") && r.flags.some(f => f.startsWith("Looks like a") && !f.includes("private note")));
+    if (sec.length) add("stop", `${sec.length} published file name${sec.length === 1 ? " looks" : "s look"} like ${sec.length === 1 ? "a secret" : "secrets"}: ${sec.slice(0, 6).map(r => `<code>${esc(r.path)}</code>`).join(", ")}${sec.length > 6 ? " and more" : ""}. This page sees names only, not contents.`);
+    const priv = out.filter(r => r.flags.some(f => f.includes("private note")));
+    if (priv.length) add("warn", `${priv.length} published file${priv.length === 1 ? " looks" : "s look"} like a draft or private note: ${priv.slice(0, 4).map(r => `<code>${esc(r.path)}</code>`).join(", ")}.`);
+    const html = out.filter(r => (r.status === "pub" || r.status === "flag") && /\.html?$/i.test(r.path));
+    if (html.length && !s.sandboxHtml) add("warn", `${html.length} HTML file${html.length === 1 ? "" : "s"} will run on the site's own origin, where ${html.length === 1 ? "it" : "they"} can read the site's browser storage. Turn on sandboxHtml for HTML you do not fully trust.`);
+    ps.filter(x => !x.def && x.hits === 0).forEach(x => add("info", `Pattern <code>${esc(x.p)}</code> matches no file in the pasted list.`));
+    if (LIST_TEXT && !parseList(LIST_TEXT).meta.modes) add("info", "The pasted list has no file modes, so symlinks and submodules cannot be told apart from files. Paste git ls-files -s to check them.");
+    if (LIST_TEXT && parseList(LIST_TEXT).meta.quoted) add("info", "Some paths were quoted by git. They were decoded here. Run git -c core.quotepath=off ls-files -s to see them as the generator does.");
+  }
+  if (s.sandboxHtml) add("info", "sandboxHtml protects HTML shown inside the viewer. A reader who opens the file's own URL directly still runs it on the site's origin.");
+  add("info", "The site shows commit author names and commit subjects, and the Authors tab lists everyone. It does not publish email addresses.");
+  return C;
+}
+
+/* ═════════════ Rendering: form ═════════════ */
+const whereTag = o => {
+  const t = { input: ["input", "INPUT", "Action input, in action.yml"], config: ["config", "CONFIG", "Key in .github/repo-pages.json"], workflow: ["workflow", "WORKFLOW", "Part of the workflow file"], context: ["context", "CONTEXT", "A fact about your repository, never written"], tool: ["tool", "PAGE", "A choice about this page's output only"] }[o.where];
+  return `<span class="tag ${t[0]}" title="${esc(t[2] + (o.source ? " - source: " + o.source : ""))}">${t[1]}</span>` + (o.key ? `<span class="tag ${o.where === "input" ? "input" : "config"}" style="opacity:.75">${esc(o.key)}</span>` : "") + (o.since && o.since !== FIRST_RELEASE ? `<span class="tag main" title="Added in repo-pages ${esc(o.since)}">${esc(o.since)}+</span>` : "");
+};
+function control(o) {
+  const v = S[o.id];
+  if (o.type === "seg") return `<div class="track" role="group" aria-label="${esc(o.label)}">${o.values.map(([val, lab]) => `<button class="opt${same(v, val) ? " selected" : ""}" data-opt="${o.id}" data-val='${esc(JSON.stringify(val))}' aria-pressed="${same(v, val)}">${esc(lab)}</button>`).join("")}</div>`;
+  if (o.type === "toggle") return "";
+  if (o.type === "text") return `<input type="text" id="f-${o.id}" data-text="${o.id}" value="${esc(v)}" spellcheck="false" autocomplete="off"${o.id === "title" ? ' placeholder="initech/intranet uses intranet"' : ""}>`;
+  if (o.type === "number") return `<input type="number" id="f-${o.id}" data-num="${o.id}" value="${v}" min="${o.min}" max="${o.max}" step="${o.step || 1}">`;
+  if (o.type === "list") return `<textarea id="f-${o.id}" data-list="${o.id}" rows="4" spellcheck="false" placeholder="memos/_drafts/**&#10;**/*.psd">${esc(v.join("\n"))}</textarea>`;
+  if (o.type === "fixed") return `<div class="fixed">${esc(v)}</div>`;
+  return "";
+}
+function rowHtml(o) {
+  const head = o.type === "toggle"
+    ? `<div class="toggle-row"><span class="label" id="lbl-${o.id}">${esc(o.label)} <span class="tags">${whereTag(o)}</span></span><button class="toggle${S[o.id] ? " on" : ""}" data-toggle="${o.id}" role="switch" aria-checked="${S[o.id]}" aria-labelledby="lbl-${o.id}"></button></div>`
+    : `<div class="label-row"><label class="label" for="f-${o.id}">${esc(o.label)}</label><span class="tags">${whereTag(o)}</span></div>`;
+  return `<div class="row${o.sub ? " sub" : ""}" data-row="${o.id}"${active(o, S) ? "" : " hidden"}>${head}${control(o)}${o.hint ? `<div class="hint">${esc(o.hint)}</div>` : ""}<div class="field-msg" data-msg="${o.id}"></div></div>`;
+}
+const PRESETS = [
+  { id: "template", name: "Template as it is", text: "Exactly templates/repo-pages.yml. No config file.", set: {} },
+  { id: "docs", name: "Public docs site", text: "Initech Intranet with a title, drafts excluded, a weekly rebuild and pull-request builds.", set: { title: "Initech Intranet", description: "Policies, memos and projects from the third floor.", exclude: ["memos/_drafts/**", "_archive/**"], schedule: true, pr: true } },
+  { id: "team", name: "Private team site", text: "A private repository whose site must stay private. Private sites need GitHub Enterprise Cloud.", set: { repo: "initech/software-team", repoVis: "private", siteVis: "private", requirePrivate: true, title: "Initech Software Team", exclude: ["**/*.pem", "teams/software/on-call.md"] } },
+  { id: "gallery", name: "Prototype gallery", text: "HTML prototypes beside their notes, sandboxed because not every page is trusted.", set: { repo: "initech/prototypes", title: "Initech Prototypes", description: "Clickable mockups, each beside its notes.", sandboxHtml: true, pr: true, exclude: ["**/*.psd", "**/node_modules/**"] } },
+  { id: "pinned", name: "Pinned and reviewed", text: `Pins the ${RELEASE.tag} commit and lets Dependabot propose each release.`, set: { pin: "sha", dependabot: true, title: "Initech Intranet" } }
+];
+function renderForm() {
+  const html = SECTIONS.map(([id, name]) => {
+    let body = "";
+    if (id === "start") {
+      body = `<div class="presets">${PRESETS.map(p => `<button class="preset${p.id === presetId ? " selected" : ""}" data-preset="${p.id}"><b>${esc(p.name)}</b><span>${esc(p.text)}</span></button>`).join("")}</div>
+        <div class="row"><div class="label-row"><label class="label" for="importBox">Import an existing .github/repo-pages.json</label><span class="tags"><span class="tag config">CONFIG</span></span></div>
+        <textarea id="importBox" rows="4" spellcheck="false" placeholder='{ "title": "Initech Intranet", "exclude": ["memos/_drafts/**"] }'></textarea>
+        <div class="btn-row"><button class="btn primary" id="importBtn">Load into the form</button><label class="btn" for="importFile">Open a file</label><input type="file" id="importFile" accept=".json,application/json" hidden><span class="hint" id="importStatus" style="margin:0"></span></div>
+        <div class="notes" id="importNotes"></div>
+        <div class="hint">Validated as you type, with the generator's own wording. Unknown keys are kept and written back unchanged, because the generator ignores them. The text after “is not valid JSON:” comes from the browser, not Python, so it differs.</div></div>`;
+    } else if (id === "files") {
+      body = `<div class="btn-row"><button class="btn" data-sample="plain">Initech sample, plain list</button><button class="btn" data-sample="modes">Initech sample with modes and traps</button><button class="btn" data-sample="clear">Clear</button></div>
+        <textarea id="listBox" rows="6" wrap="off" spellcheck="false" placeholder="git -c core.quotepath=off ls-files -s"></textarea>
+        <div class="counts" id="fileCounts"></div>
+        <div id="patternTable"></div>
+        <div class="table-wrap" id="fileTable"><div class="empty-file" style="border:none">Paste a file list or load a sample.</div></div>
+        <div class="hint">Order, as in build_site.py: file mode (with -s only), then the hidden rule, then the default and your patterns, then the collision check on what is left. Name checks for secrets, drafts and HTML are this page's own heuristics. They see names, never contents.</div>`;
+    } else {
+      body = OPTIONS.filter(o => o.sec === id).map(rowHtml).join("");
+      if (id === "repo") body += `<div class="notes" id="preflightNotes"></div>`;
+    }
+    return `<section class="sec" id="sec-${id}"><div class="sec-head"><span class="sec-title">${esc(name)}</span></div><div class="sec-lede">${esc(SEC_LEDE[id])}</div>${body}</section>`;
+  }).join("");
+  $("#form").innerHTML = html;
+  $("#index").innerHTML = `<h2>Sections</h2>` + SECTIONS.map(([id, name]) => `<a href="#sec-${id}">${esc(name)}<span class="n">${OPTIONS.filter(o => o.sec === id && o.where !== "tool").length || ""}</span></a>`).join("") +
+    `<div class="legend"><span><span class="tag input">INPUT</span> action.yml input</span><span><span class="tag config">CONFIG</span> repo-pages.json key</span><span><span class="tag workflow">WORKFLOW</span> workflow file</span><span><span class="tag context">CONTEXT</span> fact, not written</span><span><span class="tag main">vX.Y.Z+</span> needs that release or later</span></div>`;
+  if (LIST_TEXT) $("#listBox").value = LIST_TEXT;
+}
+function syncForm() {
+  OPTIONS.forEach(o => {
+    const row = document.querySelector(`[data-row="${o.id}"]`); if (!row) return;
+    row.hidden = !active(o, S);
+    if (o.type === "toggle") { const t = row.querySelector(".toggle"); t.classList.toggle("on", !!S[o.id]); t.setAttribute("aria-checked", !!S[o.id]); }
+    if (o.type === "seg") row.querySelectorAll(".opt").forEach(b => { const on = same(JSON.parse(b.dataset.val), S[o.id]); b.classList.toggle("selected", on); b.setAttribute("aria-pressed", on); });
+    const e = active(o, S) ? fieldError(o.id, S) : "";
+    const msg = row.querySelector(`[data-msg="${o.id}"]`); if (msg) msg.textContent = e;
+    const inp = row.querySelector("input,textarea"); if (inp) inp.classList.toggle("bad", !!e);
+  });
+  document.querySelectorAll("[data-preset]").forEach(b => b.classList.toggle("selected", b.dataset.preset === presetId));
+}
+function setInputsFromState() {
+  OPTIONS.forEach(o => {
+    const el = document.getElementById("f-" + o.id); if (!el) return;
+    el.value = o.type === "list" ? S[o.id].join("\n") : S[o.id];
+  });
+}
+
+/* ═════════════ Rendering: outputs ═════════════ */
+const TABS = [["summary", "Summary"], ["workflow", "repo-pages.yml"], ["config", "repo-pages.json"], ["dependabot", "dependabot.yml"], ["checks", "Checks"], ["inventory", "Inventory"]];
+let activeTab = "summary";
+try { const t = JSON.parse(localStorage.getItem("rps.tab")); if (TABS.some(([id]) => id === t)) activeTab = t; } catch (e) {}
+function hl(text, kind) {
+  return text.split("\n").map(line => {
+    const e = esc(line);
+    if (kind === "yaml") {
+      if (/^\s*#/.test(line)) return `<span class="c">${e}</span>`;
+      return e.replace(/^(\s*-?\s*)([\w.-]+)(:)/, '$1<span class="k">$2</span>$3').replace(/( # [\w.]+)$/, '<span class="c">$1</span>').replace(/(&#39;[^&]*&#39;)/g, '<span class="s">$1</span>');
+    }
+    return e.replace(/^(\s*)(&quot;[^&]+&quot;)(:)/, '$1<span class="k">$2</span>$3');
+  }).join("\n");
+}
+function fileBlock(name, text, kind, dl) {
+  return `<div class="file-head"><span class="file-name">${esc(name)}</span><div class="btn-row"><button class="btn primary" data-copy="${dl}">Copy</button><button class="btn" data-download="${dl}">Download</button></div></div><pre class="code" id="code-${dl}">${hl(text, kind)}</pre>`;
+}
+let OUT = {};
+function renderOutputs() {
+  const fe = fieldErrors(S);
+  const wf = buildWorkflow(S), cfgObj = configObject(S), cfgText = Object.keys(cfgObj).length ? formatJson(cfgObj) : "", dep = buildDependabot(S);
+  OUT = { workflow: { name: "repo-pages.yml", path: ".github/workflows/repo-pages.yml", text: wf }, config: { name: "repo-pages.json", path: ".github/repo-pages.json", text: cfgText }, dependabot: { name: "dependabot.yml", path: ".github/dependabot.yml", text: dep } };
+  const list = LIST_TEXT ? classify(parseList(LIST_TEXT).rows, S) : null;
+  const C = checks(S, list);
+  const nStop = C.filter(c => c.lv === "stop").length, nWarn = C.filter(c => c.lv === "warn").length;
+  $("#tabs").innerHTML = TABS.map(([id, name]) => {
+    let cnt = "";
+    if (id === "checks") cnt = nStop ? `<span class="cnt stop">${nStop}</span>` : nWarn ? `<span class="cnt warn">${nWarn}</span>` : "";
+    if (id === "config" && !cfgText) cnt = `<span class="cnt">none</span>`;
+    if (id === "dependabot" && !dep) cnt = `<span class="cnt">none</span>`;
+    return `<button class="tab${id === activeTab ? " active" : ""}" role="tab" aria-selected="${id === activeTab}" data-tab="${id}">${esc(name)}${cnt}</button>`;
+  }).join("");
+  TABS.forEach(([id]) => document.getElementById("pane-" + id).classList.toggle("active", id === activeTab));
+
+  const errBanner = fe.length ? `<div class="note stop"><b class="lv">Fix first</b><span>${fe.length} field${fe.length === 1 ? " has" : "s have"} an error, so the files below may not work. See Checks.</span></div>` : "";
+  $("#pane-workflow").innerHTML = errBanner + fileBlock(OUT.workflow.path, wf, "yaml", "workflow") + `<div class="hint">With every option at its default, this is byte for byte <code>templates/repo-pages.yml</code>. Shapes other than the template, such as the pull-request job, have not been run on GitHub.</div>`;
+  $("#pane-config").innerHTML = (cfgText ? errBanner + fileBlock(OUT.config.path, cfgText, "json", "config") : `<div class="empty-file">No <code>.github/repo-pages.json</code> is needed. Every value is the default: the title is the repository's name, nothing extra is excluded, hidden files stay out and HTML is not sandboxed.</div>`) +
+    (Object.keys(preserved).length ? `<div class="note info"><b class="lv">Kept</b><span>Unknown keys from the import are written back unchanged: ${Object.keys(preserved).map(k => `<code>${esc(k)}</code>`).join(", ")}. The generator ignores them.</span></div>` : "");
+  $("#pane-dependabot").innerHTML = dep ? fileBlock(OUT.dependabot.path, dep, "yaml", "dependabot") + `<div class="hint">Copied from the README's Get updates section. If the repository already has a Dependabot file, add the github-actions entry to it instead.</div>` : `<div class="empty-file">No Dependabot file. It is offered when the workflow pins a commit. @v1 updates itself, and a fork is yours to update.</div>`;
+  $("#pane-checks").innerHTML = `<div class="notes">${C.map(c => `<div class="note ${c.lv}"><b class="lv">${{ stop: "Stop", warn: "Warn", info: "Note" }[c.lv]}</b><span>${c.html}</span></div>`).join("")}</div>`;
+  $("#pane-summary").innerHTML = summaryHtml(C, list, cfgText, dep);
+  $("#pane-inventory").innerHTML = inventoryHtml();
+  // Preflight notes beside the repository facts
+  const pf = preflight(S);
+  $("#preflightNotes").innerHTML = `<div class="note ${pf.ok ? "ok" : "stop"}"><b class="lv">${esc(RELEASE.tag)}</b><span>${esc(pf.text)}</span></div>`;
+  renderFiles(list);
+}
+function summaryHtml(C, list, cfgText, dep) {
+  const s = S, items = [];
+  const name = s.title || s.repo.split("/")[1] || "the repository";
+  const pf = preflight(s);
+  const trig = [];
+  if (s.push) trig.push(`every push to <code>${esc(s.branch)}</code>`);
+  if (s.dispatch) trig.push("a manual run from the Actions tab");
+  if (s.schedule) trig.push(`a schedule (<code>${esc(s.cron)}</code>, UTC)`);
+  if (s.workflowRun) trig.push(`a successful run of ${esc(s.workflowRunNames)}`);
+  const andList = a => a.length < 2 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+  items.push(trig.length ? `It rebuilds the site on ${andList(trig)}.` : "No trigger is on, so it never runs.");
+  if (s.pr) items.push(`Pull requests into <code>${esc(s.branch)}</code> build the site to prove it works, and publish nothing.`);
+  items.push(s.pin === "v1" ? "It follows <code>@v1</code>, so each v1 release arrives on the next rebuild." : s.pin === "sha" ? `It runs one pinned commit${s.shaLabel ? ` (${esc(s.shaLabel)})` : ""}. Nothing changes until you update the pin${dep ? ", and Dependabot opens a pull request for each release" : ""}.` : `It runs your fork, <code>${esc(s.forkRepo)}@${esc(s.forkRef)}</code>.`);
+  items.push(pf.ok ? (s.deploy ? "The action's preflight allows the deploy." + (pf.text === "Publishes." ? "" : " " + esc(pf.text.replace(/^Publishes[,.]\s*/, ""))) : esc(pf.text)) : `<b>The preflight refuses to publish.</b> ${esc(pf.text)}`);
+  if (s.deploy) items.push(s.repoVis === "public" || s.siteVis !== "private" ? "The site is public on the internet." : "The site is private. Only people with read access to the repository can open it.");
+  items.push(`The site is titled “${esc(name)}”${s.title ? "" : ", the repository's name"}${s.description ? `, with the description “${esc(s.description)}”` : ""}.`);
+  const ex = cleanExclude(s.exclude);
+  items.push(`It publishes every tracked regular file except <code>.github/**</code>, ${s.includeHidden ? "" : "hidden files, "}<code>.DS_Store</code> and <code>.gitkeep</code> files${ex.length ? `, and ${ex.map(p => `<code>${esc(p)}</code>`).join(", ")}` : ""}. Symlinks and submodules are skipped.`);
+  items.push(s.sandboxHtml ? "HTML pages run in a sandbox inside the viewer, with no access to the site's origin." : "HTML pages run on the site's own origin.");
+  if (list) { const n = list.out.filter(r => r.status === "pub" || r.status === "flag").length; items.push(`From the pasted list, ${n} of ${list.out.length} files would be published.`); }
+  const steps = [];
+  steps.push(`Commit <code>.github/workflows/repo-pages.yml</code>${cfgText ? " and <code>.github/repo-pages.json</code>" : ""}${dep ? " and <code>.github/dependabot.yml</code>" : ""}, on a branch, through a pull request.`);
+  steps.push(`Set <b>Settings &gt; Pages &gt; Source</b> to <b>GitHub Actions</b>, or run <code>gh api -X POST "repos/${esc(s.repo)}/pages" -f build_type=workflow</code>.`);
+  if (s.siteVis === "private") steps.push("Check that GitHub Pages visibility is Private before the first deploy.");
+  steps.push("After the merge, open the run's summary page. It lists every file the run published.");
+  const nStop = C.filter(c => c.lv === "stop").length;
+  return `${nStop ? `<div class="note stop"><b class="lv">Stop</b><span>${nStop} check${nStop === 1 ? "" : "s"} would stop the run or expose something. See Checks.</span></div>` : `<div class="note ok"><b class="lv">OK</b><span>Nothing in this setup stops the run. Read the warnings in Checks.</span></div>`}
+    <div class="summary"><h3>What this setup does</h3><ul>${items.map(i => `<li>${i}</li>`).join("")}</ul><h3>Next steps</h3><ol>${steps.map(i => `<li>${i}</li>`).join("")}</ol>
+    <h3>Files</h3><ul><li><code>.github/workflows/repo-pages.yml</code>, always.</li><li><code>.github/repo-pages.json</code>, ${cfgText ? "with the keys you changed." : "not needed."}</li><li><code>.github/dependabot.yml</code>, ${dep ? "for pinned updates." : "not needed."}</li></ul></div>`;
+}
+function inventoryHtml() {
+  const rows = OPTIONS.filter(o => o.where !== "tool");
+  const def = o => o.type === "fixed" ? "fixed" : o.id === "token" ? "github.token" : o.id === "title" ? "repository name" : Array.isArray(o.def) ? "[]" : o.def === "" ? '""' : String(o.def);
+  return `<div class="hint" style="margin:0">${rows.length} options, from the same registry the form uses.</div><div class="table-wrap" style="max-height:none"><table><thead><tr><th>Option</th><th>Where</th><th>Key</th><th>Type</th><th>Default</th><th>In</th><th>Source</th></tr></thead><tbody>${rows.map(o => `<tr><td>${esc(o.label)}</td><td>${o.where}</td><td class="path">${esc(o.key || "")}</td><td>${o.type}${o.values ? ": " + o.values.map(v => esc(JSON.stringify(v[0]))).join(", ") : ""}</td><td class="path">${esc(def(o))}</td><td>${o.where === "context" ? "-" : o.since && o.since !== FIRST_RELEASE ? esc(o.since) + " and later" : "every release"}</td><td>${esc(o.source || "")}</td></tr>`).join("")}</tbody></table></div>`;
+}
+function renderFiles(list) {
+  const counts = $("#fileCounts"), table = $("#fileTable"), pt = $("#patternTable");
+  if (!list) { counts.innerHTML = ""; pt.innerHTML = ""; table.innerHTML = `<div class="empty-file" style="border:none">Paste a file list or load a sample.</div>`; return; }
+  const { out, pats } = list;
+  const groups = [["all", "All", () => true], ["pub", "Published", r => r.status === "pub" || r.status === "flag"], ["flag", "Flagged", r => r.flags.length > 0], ["hid", "Hidden", r => r.status === "hid"], ["exc", "Excluded", r => r.status === "exc"], ["skip", "Not regular", r => r.status === "skip"], ["stop", "Collisions", r => r.status === "stop"]];
+  counts.innerHTML = groups.map(([id, name, f]) => `<button class="count${fileFilter === id ? " selected" : ""}" data-filter="${id}">${name} <b>${out.filter(f).length}</b></button>`).join("");
+  const f = (groups.find(g => g[0] === fileFilter) || groups[0])[2];
+  const shown = out.filter(f);
+  const label = { pub: ["pub", "Published"], flag: ["flag", "Published, check"], hid: ["hid", "Hidden"], exc: ["exc", "Excluded"], skip: ["skip", "Skipped"], stop: ["stop", "Build stops"] };
+  table.innerHTML = shown.length ? `<table><thead><tr><th>Path</th><th>Result</th><th>Why</th></tr></thead><tbody>${shown.slice(0, 600).map(r => `<tr><td class="path">${esc(r.path)}</td><td><span class="st ${label[r.status][0]}">${label[r.status][1]}</span></td><td>${esc([r.reason].concat(r.flags).filter(Boolean).join(". ") || "Tracked regular file")}</td></tr>`).join("")}${shown.length > 600 ? `<tr><td colspan="3">... and ${shown.length - 600} more</td></tr>` : ""}</tbody></table>` : `<div class="empty-file" style="border:none">No file in this group.</div>`;
+  pt.innerHTML = `<div class="table-wrap" style="max-height:12rem"><table><thead><tr><th>Pattern</th><th>From</th><th>Matches</th><th>Lint</th></tr></thead><tbody>${pats.map(x => `<tr><td class="path">${esc(x.p)}</td><td>${x.def ? "default" : "yours"}</td><td>${x.hits}</td><td>${esc((x.lint || []).join(" ") || "-")}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+/* ═════════════ Import ═════════════ */
+function validateImport(text) {
+  const notes = $("#importNotes");
+  if (!text.trim()) { notes.innerHTML = ""; return null; }
+  let obj;
+  try { obj = JSON.parse(text); } catch (e) { notes.innerHTML = `<div class="note stop"><b class="lv">Stop</b><span>${esc(CONFIG_FILE)} is not valid JSON: ${esc(e.message)}</span></div>`; return null; }
+  const errs = checkConfig(obj, CONFIG_FILE);
+  if (errs.length) { notes.innerHTML = errs.map((e, i) => `<div class="note stop"><b class="lv">${i === 0 ? "Stop" : "Also"}</b><span>${esc(e)}${i === 0 && errs.length > 1 ? " The generator stops here and reports only this one." : ""}</span></div>`).join(""); return null; }
+  const known = CONFIG_TYPES.map(c => c[0]), unknown = Object.keys(obj).filter(k => !known.includes(k));
+  notes.innerHTML = `<div class="note ok"><b class="lv">Valid</b><span>The generator would accept this file.${unknown.length ? ` It ignores ${unknown.map(k => `<code>${esc(k)}</code>`).join(", ")}.` : ""}</span></div>`;
+  return obj;
+}
+function applyImport(obj) {
+  S = Object.assign(S, { title: "", description: "", exclude: [], includeHidden: false, sandboxHtml: false });
+  ["title", "description", "includeHidden", "sandboxHtml"].forEach(k => { if (k in obj) S[k] = obj[k]; });
+  if ("exclude" in obj) S.exclude = obj.exclude.slice();
+  preserved = {};
+  Object.keys(obj).filter(k => !CONFIG_TYPES.some(c => c[0] === k)).forEach(k => preserved[k] = obj[k]);
+  presetId = "";
+  setInputsFromState(); syncForm(); renderOutputs();
+  toast("Loaded into the form");
+}
+
+/* ═════════════ Events ═════════════ */
+function update() { syncForm(); renderOutputs(); }
+document.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.opt) { S[b.dataset.opt] = JSON.parse(b.dataset.val); presetId = ""; update(); }
+  else if (b.dataset.toggle) { S[b.dataset.toggle] = !S[b.dataset.toggle]; presetId = ""; update(); }
+  else if (b.dataset.preset) { const p = PRESETS.find(x => x.id === b.dataset.preset); S = Object.assign(defaults(), JSON.parse(JSON.stringify(p.set))); preserved = {}; presetId = p.id; setInputsFromState(); update(); toast("Preset: " + p.name); }
+  else if (b.dataset.tab) { activeTab = b.dataset.tab; store("rps.tab", activeTab); renderOutputs(); }
+  else if (b.dataset.filter) { fileFilter = b.dataset.filter; renderOutputs(); }
+  else if (b.dataset.sample) { LIST_TEXT = b.dataset.sample === "plain" ? SAMPLE_PLAIN : b.dataset.sample === "modes" ? SAMPLE_MODES : ""; $("#listBox").value = LIST_TEXT; fileFilter = "all"; renderOutputs(); }
+  else if (b.dataset.copy) copyText(OUT[b.dataset.copy].text);
+  else if (b.dataset.download) download(OUT[b.dataset.download]);
+  else if (b.id === "importBtn") { const o = validateImport($("#importBox").value); if (o) applyImport(o); }
+  else if (b.dataset.settheme) setTheme(b.dataset.settheme);
+});
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.dataset.text) { S[t.dataset.text] = t.value; presetId = ""; update(); }
+  else if (t.dataset.num) { const n = t.value === "" ? NaN : Number(t.value); S[t.dataset.num] = BY_ID[t.dataset.num].step ? Math.round(n * 100) / 100 : n; presetId = ""; update(); }
+  else if (t.dataset.list) { S[t.dataset.list] = t.value.split(/\r?\n/); presetId = ""; update(); }
+  else if (t.id === "listBox") { LIST_TEXT = t.value; renderOutputs(); }
+  else if (t.id === "importBox") validateImport(t.value);
+});
+document.addEventListener("change", e => {
+  if (e.target.id !== "importFile" || !e.target.files[0]) return;
+  const r = new FileReader();
+  r.onload = () => { $("#importBox").value = r.result; const o = validateImport(r.result); if (o) applyImport(o); };
+  r.readAsText(e.target.files[0]);
+});
+function copyText(text) {
+  const done = () => toast("Copied");
+  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+  else fallbackCopy(text, done);
+}
+function fallbackCopy(text, done) { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) { toast("Copy failed. Select the text instead."); } ta.remove(); }
+function download(f) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([f.text], { type: "text/plain" })); a.download = f.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+
+/* ═════════════ Theme ═════════════ */
+let theme = "system";
+try { const t = JSON.parse(localStorage.getItem("rps.theme")); if (["light", "dark", "system"].includes(t)) theme = t; } catch (e) {}
+function setTheme(t) {
+  theme = t; store("rps.theme", t);
+  if (t === "system") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", t);
+  $("#themeTrack").innerHTML = [["light", "Light"], ["dark", "Dark"], ["system", "System"]].map(([v, l]) => `<button class="opt${v === theme ? " selected" : ""}" data-settheme="${v}" aria-pressed="${v === theme}" style="flex:0 0 auto">${l}</button>`).join("");
+}
+
+/* ═════════════ Check hook: tests/run_setup_checks.mjs reads the page's rules through this object. Nothing on the page uses it ═════════════ */
+window.__setup = { RELEASE, PRESETS, samples: { plain: SAMPLE_PLAIN, modes: SAMPLE_MODES }, DEFAULT_EXCLUDE, RESERVED, VIEWER_DIR, REGULAR_MODES, CONFIG_TYPES: CONFIG_TYPES.map(c => [c[0], c[2]]), preflight: patch => preflight(Object.assign(defaults(), patch)),  get state() { return S; }, set: patch => { Object.assign(S, patch); setInputsFromState(); update(); }, reset: () => { S = defaults(); preserved = {}; setInputsFromState(); update(); }, buildWorkflow: () => buildWorkflow(S), configText: () => OUT.config.text, classify: text => classify(parseList(text).rows, S).out.map(r => [r.path, r.status, r.reason]), checkConfig, globToRegex: p => globToRegex(p).source, OPTIONS, inventory: () => OPTIONS.filter(o => o.where !== "tool").map(o => ({ id: o.id, label: o.label, where: o.where, key: o.key || "", type: o.type, def: o.def, values: o.values ? o.values.map(v => v[0]) : null, since: o.since || "", source: o.source || "" })) };
+
+setTheme(theme);
+$("#ruleStamp").textContent = `Rules from repo-pages ${RELEASE.tag}`;
+renderForm();
+syncForm();
+renderOutputs();
+</script>
+</body>
+</html>
