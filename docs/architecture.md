@@ -18,6 +18,8 @@ flowchart LR
     Demo --> Page["One self-contained page"]
     Page --> Checks["tests/run_browser_checks.mjs"]
     Checks --> Live["Published demo, from main only"]
+    Setup["setup/index.html"] --> SetupCheck["tests/run_setup_checks.mjs"]
+    SetupCheck --> Live
 ```
 
 ## Parts
@@ -33,7 +35,9 @@ flowchart LR
 | Browser checks | `tests/browser_checks.js` | 64 settings behavior checks that run inside the page |
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
 | Render check | `tests/run_render_check.mjs` | Opens one Markdown file on an ordinary build, which loads `marked` and DOMPurify by URL, and fails unless both load and the file renders |
-| Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo from `main` |
+| Setup page | `setup/index.html` | A form that writes an adopter's workflow and config files. It is published beside the demo and is not part of any adopter's site |
+| Setup check | `tests/run_setup_checks.mjs`, `tests/setup_compare.py` | Runs the setup page in a browser and compares its results with the generator, the preflight, the template and the sample |
+| Workflow | `.github/workflows/demo.yml` | Runs the tests, build and checks, then publishes the demo and the setup page from `main` |
 | Vendor watch | `tests/vendor-watch/package.json` | Lists the vendored versions so Dependabot reports updates. Nothing installs it |
 | Action | `action.yml` | Checks, builds and deploys a repository, using this repository's viewer and generator |
 | Preflight | `generator/preflight.py` | Refuses a private repository whose site is public, and turns setup mistakes into errors that name the fix |
@@ -87,20 +91,41 @@ The generator writes `site-data.json` next to the viewer. It holds the site conf
 
 Dates are relative to the build, so the output changes on every run. **Do not commit the built page.** Build it where you need it.
 
+## The setup page
+
+`setup/index.html` is one self-contained file, like the viewer. It has no build step, loads nothing from the network and sends nothing anywhere. An adopter fills in a form, and the page writes the files to commit: the workflow, a `repo-pages.json` with only the keys that differ from their defaults, and a Dependabot file for a pinned commit. It also predicts the preflight and classifies a pasted file list.
+
+The page copies its rules from four places, so a check keeps them in step:
+
+| Rule in the page | Copied from | What the check compares |
+|---|---|---|
+| The default workflow | `templates/repo-pages.yml` | The page's output with every option at its default, byte for byte after line endings are normalized |
+| Publish rules | `DEFAULT_EXCLUDE`, `RESERVED`, `VIEWER_DIR`, `REGULAR_MODES` and `glob_to_regex` in `build_site.py` | The constants, and every path of the page's sample list under three pattern sets |
+| Config errors | `CONFIG_TYPES` and `check_config` | The key names and wording, and the first error for 17 configs |
+| Preflight | `site_refusal` in `preflight.py` | All 36 combinations of repository visibility, site visibility and the two privacy inputs |
+| Sample list | `examples/initech/` | The page's plain file list with the files in the folder |
+| Latest release | The `vX.Y.Z` tags on `origin` | `RELEASE` in the page, which must name the latest tag and its commit |
+
+`tests/run_setup_checks.mjs` opens the page, reads its rules through `window.__setup`, and pipes the results to `tests/setup_compare.py`, which recomputes each one with the real code. The runner also fails if the page requests anything from another host, logs an error, or scrolls sideways at 375px wide. Nothing on the page uses `window.__setup`.
+
+The page shares an origin with the demo, whose sample HTML runs without a sandbox. It therefore stores only its theme and its active tab, under keys with the `rps.` prefix, so they cannot collide with the viewer's `rp.` keys. Pasted file lists and imported configs stay in memory.
+
+After each release, `RELEASE` in the page must name the new tag and `git rev-parse vX.Y.Z^{commit}`. The check reads the tags from `origin`, so the first pull request after a release fails until that line is updated.
+
 ## Continuous integration
 
-`.github/workflows/demo.yml` runs on every pull request, and on pushes to `main` that touch `viewer/`, `generator/`, `examples/`, `tests/`, `action.yml` or the workflow. It can also be started by hand. Pull requests have no path filter because a required check must report on every pull request, including docs-only ones.
+`.github/workflows/demo.yml` runs on every pull request, and on pushes to `main` that touch `viewer/`, `generator/`, `examples/`, `tests/`, `setup/`, `templates/`, `action.yml` or the workflow. It can also be started by hand. Pull requests have no path filter because a required check must report on every pull request, including docs-only ones.
 
 | Job | Runs on | What it does |
 |---|---|---|
-| `build` | Every trigger | Runs the action in build-only mode, tests the generator, builds the demo, runs the render check on the action's site and the browser checks on the demo, and uploads the page |
-| `deploy` | `main` only, not pull requests | Publishes the uploaded page to GitHub Pages |
+| `build` | Every trigger | Runs the action in build-only mode, tests the generator, builds the demo, runs the render check on the action's site and the browser checks on the demo, copies the setup page to `_site/setup/`, runs the setup check on that copy, and uploads the folder |
+| `deploy` | `main` only, not pull requests | Publishes the uploaded folder to GitHub Pages |
 
 The demo comes from the viewer and generator in the same commit, so it cannot fall behind them. A failed test or check stops the run before anything is published.
 
 The "Protect main" ruleset requires the `build` check on every pull request. It also requires a pull request for every change to `main`, allows squash merges only, and blocks force pushes and branch deletion. Repository admins can bypass only the pull request requirement.
 
-The built page is the viewer, the generator's output and the sample content. It is served at <https://projects.prisantlabs.com/repo-pages/>, because the organization's site owns that domain.
+The built page is the viewer, the generator's output and the sample content. It is served at <https://projects.prisantlabs.com/repo-pages/>, because the organization's site owns that domain. The setup page is served at <https://projects.prisantlabs.com/repo-pages/setup/>.
 
 ## Settings
 
@@ -118,6 +143,7 @@ npx playwright install chromium
 node tests/run_browser_checks.mjs
 python3 generator/build_site.py --viewer viewer --out /tmp/repo-pages-site
 node tests/run_render_check.mjs /tmp/repo-pages-site
+node tests/run_setup_checks.mjs
 ```
 
 The generator tests do not cover the viewer. The browser checks cover settings behavior on one Markdown file, so a change to another view still needs a look in the browser.

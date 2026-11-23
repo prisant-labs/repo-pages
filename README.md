@@ -124,6 +124,8 @@ git add .github/workflows/repo-pages.yml && git commit -m "Publish with repo-pag
 
 That is the whole install. The [workflow](templates/repo-pages.yml) is one small file, and the viewer and generator come from the action. If your default branch is not `main`, change the branch name in the workflow. Each run's summary page lists every file it published, so you can check what went public.
 
+To choose options first, use the **[setup page](https://projects.prisantlabs.com/repo-pages/setup/)**. It writes the workflow, a `repo-pages.json` when you change a default, and a Dependabot file when you pin a commit. It predicts what the action's preflight will say, and it shows which files would publish when you paste `git ls-files -s`. The page runs in your browser and sends nothing anywhere.
+
 ### Publish with a coding agent
 
 Paste this prompt into a coding agent that is open in the repository you want to publish. It does the same install, and it first reviews what would go public, which a workflow cannot judge.
@@ -161,6 +163,8 @@ Work on a new branch, and do not push to the default branch.
    - If I named exclusions or a title, write `.github/repo-pages.json` with the keys
      `title` and `exclude`. If this repository holds HTML I may not fully trust, add
      `"sandboxHtml": true` and tell me.
+   - If I made the files with the setup page at
+     https://projects.prisantlabs.com/repo-pages/setup/, use mine instead, and still show me what they change.
 
 3. Open a pull request.
 
@@ -197,6 +201,8 @@ The title defaults to the repository's name. `includeHidden` and `sandboxHtml` t
 | `allow-private-repository` | `false` | Set to `true` to publish a private repository whose site is public. A private site needs no setting |
 | `require-private-site` | `false` | Set to `true` to publish only when the site is private. `allow-private-repository` does not override it. Any value other than `true` or `false` stops the run |
 | `token` | `github.token` | The token for the repository checks, checkout and deployment |
+
+The [setup page](https://projects.prisantlabs.com/repo-pages/setup/) writes both files from a form and checks each value with the generator's own rules.
 
 To preview a site on your own machine, build it from a clone of this repository, and do not commit `_site/`:
 
@@ -283,7 +289,9 @@ To keep the site private, add `require-private-site: 'true'` under `with:` in th
 
 **Why does the Updated tab show one author for everything?** The site was built from a shallow clone. Build with full history.
 
-**How current is the live demo?** A workflow rebuilds it on every push to `main` that touches the viewer, generator, sample or checks. It publishes only if the tests and browser checks pass.
+**How current is the live demo?** A workflow rebuilds it on every push to `main` that touches the viewer, generator, sample, checks, setup page or template. It publishes only if the tests and browser checks pass.
+
+**Is there a form that writes the files?** Yes. The [setup page](https://projects.prisantlabs.com/repo-pages/setup/) covers every action input, every config key and the common workflow choices. Its rules are copied from the action, the generator and the template, and a check compares them with the code on every pull request, so they cannot drift. It runs in your browser, sends nothing anywhere, and remembers only its theme and tab.
 
 **Are reader settings shared between readers?** No. They live in each reader's browser storage. If storage is blocked, the defaults apply.
 
@@ -331,6 +339,7 @@ The `if:` skips the rebuild when the bot's run fails. A `workflow_run` run build
 |---|---|
 | See it working | The [live demo](https://projects.prisantlabs.com/repo-pages/) |
 | Publish your repository | [Four commands](#publish-in-four-commands) or [a coding agent](#publish-with-a-coding-agent) |
+| Choose options in a form | The [setup page](https://projects.prisantlabs.com/repo-pages/setup/) |
 | Control how updates arrive | [Get updates](#get-updates) |
 | Decide whether a site is safe to publish | The [FAQ](#-faq) and [SECURITY.md](SECURITY.md) |
 | Know every setting a reader can change | [docs/settings-spec.md](docs/settings-spec.md) |
@@ -371,10 +380,11 @@ The `if:` skips the rebuild when the bot's run fails. A `workflow_run` run build
 | **Latest release** | [v1.1.0](https://github.com/prisant-labs/repo-pages/releases/tag/v1.1.0) |
 | **Install** | One workflow file, using `prisant-labs/repo-pages@v1` |
 | **Live demo** | [projects.prisantlabs.com/repo-pages](https://projects.prisantlabs.com/repo-pages/), rebuilt from `main` |
+| **Setup page** | [projects.prisantlabs.com/repo-pages/setup](https://projects.prisantlabs.com/repo-pages/setup/), one HTML file published with the demo |
 | **Viewer** | One HTML file, plus `marked` and DOMPurify at pinned versions |
 | **Generator** | One Python script, using only the standard library |
 | **Sample** | 88 parody files and a script of 41 commits |
-| **Checks** | Generator tests and 64 browser checks, required on every pull request |
+| **Checks** | Generator tests, 64 browser checks and a setup page check, required on every pull request |
 | **License** | [MIT](LICENSE) |
 
 ### Repo structure
@@ -386,8 +396,9 @@ repo-pages/
 │   └── vendor/            #   pinned copies of marked and DOMPurify
 ├── generator/             # build_site.py, preflight.py and their tests
 ├── templates/             # the workflow to copy into your repository
+├── setup/                 # the setup page, published beside the demo
 ├── examples/              # the Initech sample and the demo build
-├── tests/                 # browser checks, their runner, and the vendor watch list
+├── tests/                 # browser checks, the setup check, their runners, and the vendor watch list
 ├── docs/                  # features, settings, design, architecture and ideas
 ├── .github/               # the demo workflow, Dependabot, and issue forms
 ├── CHANGELOG.md
