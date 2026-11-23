@@ -406,8 +406,7 @@ class PrivateSiteTests(unittest.TestCase):
         for public in (True, MISSING):
             with self.subTest(public=public):
                 error = self.run_check("internal", public)[0]
-                self.assertIn("This repository is internal", error)
-                self.assertIn("GitHub counts internal repositories as private", error)
+                self.assertIn("This repository has internal visibility, which GitHub counts as private.", error)
         self.assertNotIn("internal", self.run_check("private", True)[0])
 
     def test_require_private_site_with_every_visibility_and_public_value(self):

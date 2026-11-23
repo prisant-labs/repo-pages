@@ -104,7 +104,7 @@ def site_refusal(
         )
 
     if info.get("visibility") == "internal":
-        kind = "This repository is internal. GitHub counts internal repositories as private."
+        kind = "This repository has internal visibility, which GitHub counts as private."
     else:
         kind = "This repository is private."
     if public is True:

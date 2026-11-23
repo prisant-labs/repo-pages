@@ -12,7 +12,7 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ### Changed
 
-- **A private site publishes without a setting.** The action now checks whether the GitHub Pages site is public, not whether the repository is private. A private or internal repository whose site is private, which needs GitHub Enterprise Cloud, now publishes. Before, it was refused unless `allow-private-repository` was `"true"`. A private repository whose site is public is still refused by default. If GitHub does not say whether the site is public, the action treats it as public. Internal repositories count as private, and the error messages say so.
+- **A private site publishes without a setting.** The action now checks whether the GitHub Pages site is public, not whether the repository is private. A private repository whose site is private, which needs GitHub Enterprise Cloud, now publishes. Before, it was refused unless `allow-private-repository` was `"true"`. A private repository whose site is public is still refused by default. If GitHub does not say whether the site is public, the action treats it as public. A repository with internal visibility counts as private, and the error messages say so.
 - **`marked` is now 18.2.1.** Upstream fixes edge cases in block quotes, lazy lines, tabs, task items, link destinations in angle brackets and code spans inside link text. It also keeps trailing blank lines in fenced code. Every Markdown file in this repository renders to the same HTML as with 18.2.0, but a file that relies on one of those edge cases can render differently.
 
 ### Security
