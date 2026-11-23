@@ -138,8 +138,9 @@ Work on a new branch, and do not push to the default branch.
 1. Show me what would go public.
    - Tell me this repository's visibility, and whether its GitHub Pages site is
      public or private. A site can be public on the internet even when its
-     repository is private. The action publishes a private or internal repository
-     only when its site is private, or when `allow-private-repository` is "true".
+     repository is private. The action publishes a repository that is private or
+     has internal visibility only when its site is private, or when
+     `allow-private-repository` is "true".
    - If the site must stay private, offer to set `require-private-site` to "true",
      which stops any deploy while the site is public.
    - Run `git ls-files`. repo-pages publishes every tracked file, except `.github/**`,
@@ -276,7 +277,7 @@ The viewer and generator always ship together, so they cannot get out of step. T
 
 **Do HTML files run?** Yes, on the site's own origin by default. Set `sandboxHtml` to `true` if you publish HTML you do not fully trust. [SECURITY.md](SECURITY.md) explains why.
 
-**Is the site private?** Only if your GitHub plan has private sites. A GitHub Pages site is public on the internet, even when its repository is private, except on GitHub Enterprise Cloud. There, an organization can make the site of a private or internal repository private. Only people with read access to the repository can then open it. A private site gets a different URL, unless it uses a custom domain. repo-pages publishes a private site with no extra setting.
+**Is the site private?** Only if your GitHub plan has private sites. A GitHub Pages site is public on the internet, even when its repository is private, except on GitHub Enterprise Cloud. There, an organization can make a repository's site private when the repository is private or has internal visibility. Only people with read access to the repository can then open it. A private site gets a different URL, unless it uses a custom domain. repo-pages publishes a private site with no extra setting.
 
 To keep the site private, add `require-private-site: 'true'` under `with:` in the workflow, where the template has it commented out. Each run then stops before deploying if the site is public. It cannot hide a site that someone has already made public, and runs with `deploy: false` skip the check. Check GitHub's current rules before you publish anything sensitive.
 
@@ -288,7 +289,7 @@ To keep the site private, add `require-private-site: 'true'` under `with:` in th
 
 **How do I get fixes, including security fixes?** A workflow that uses `@v1` picks them up on its next rebuild. A workflow pinned to a commit needs that pin updated. [Get updates](#get-updates) compares the options.
 
-**Can I publish from a private repository?** Yes. The action checks whether the site is public, not whether the repository is private. A private repository with a private site publishes with no setting. A private repository with a public site is refused, because anyone on the internet could read it. To publish it publicly anyway, set `allow-private-repository` to `true`. Internal repositories count as private, because GitHub reports them as private.
+**Can I publish from a private repository?** Yes. The action checks whether the site is public, not whether the repository is private. A private repository with a private site publishes with no setting. A private repository with a public site is refused, because anyone on the internet could read it. To publish it publicly anyway, set `allow-private-repository` to `true`. A repository with internal visibility counts as private, because GitHub reports it as private.
 
 **What can make the workflow fail?** The action's error names the fix in each of these cases:
 
