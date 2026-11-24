@@ -84,7 +84,6 @@ Every idea here draws plain SVG in the viewer, so none of them loads anything fr
 
 | Idea | What the reader gets | What it takes |
 |---|---|---|
-| **Setup page** (in prototype) | A guided page that writes the two config files for a new repo | A static form that renders the YAML and JSON |
 | **Preview deploys for pull requests** | Reviewers see the site as it will look after the merge | Upload the built site as a workflow artifact, or deploy to a second Pages environment |
 | **A hub of sites** (in prototype) | One page listing every repo that uses Repo Pages, with viewer versions, build health and privacy | A scheduled workflow reads the Pages and Actions APIs for each repo and writes the hub's data file |
 | **Agent index** | An `llms.txt` and a JSON index at the site root, so agents can find and cite files | Written by the generator next to the data file |

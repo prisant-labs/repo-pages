@@ -1,7 +1,8 @@
 # Tests the generator, builds the Initech demo from this commit's viewer and generator,
-# and runs the browser checks on the result. Pushes to main then publish the page to
-# https://projects.prisantlabs.com/repo-pages/ - the org site owns that domain, and
-# GitHub serves this repository's Pages site under it at /repo-pages/.
+# and runs the browser checks on the result. It also checks the setup page against the
+# code it copies its rules from. Pushes to main then publish the demo to
+# https://projects.prisantlabs.com/repo-pages/ and the setup page to /repo-pages/setup/.
+# The org site owns that domain, and GitHub serves this repository's Pages site under it.
 #
 # Pull requests have no path filter, because the "Protect main" ruleset requires the
 # build check. A filtered workflow would never report on a docs-only pull request,
@@ -16,6 +17,8 @@ on:
       - 'generator/**'
       - 'examples/**'
       - 'tests/**'
+      - 'setup/**'
+      - 'templates/**'
       - 'action.yml'
       - '.github/workflows/demo.yml'
   pull_request:
@@ -82,6 +85,15 @@ jobs:
 
       - name: Run the browser checks
         run: node tests/run_browser_checks.mjs
+
+      - name: Add the setup page to the demo
+        run: |
+          mkdir -p _site/setup
+          cp setup/index.html _site/setup/index.html
+
+      # Runs on the copy, so it also proves the page is in the artifact.
+      - name: Check the setup page against the code it copies
+        run: node tests/run_setup_checks.mjs _site/setup
 
       - name: Upload the demo
         uses: actions/upload-pages-artifact@v5
