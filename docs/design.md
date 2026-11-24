@@ -67,7 +67,7 @@ Use this wording exactly. A dash in the Hint column means the row has no hint.
 | Tree | Reveal the open file | Toggle | Opens its folders and scrolls the tree to it. |
 | Lists | Start on tab | Folders, New, Updated, Authors, History | The tab the panel opens on when you load the site. |
 | Lists | New and Updated show | Latest, 7d, 30d, 90d | Latest is the last 40 commits. 7d is the last 7 days. |
-| Documents | Text | A−, the percent, A+ | - |
+| Documents | Text size, with the percent at the right | S, M, L, XL (each has its percent as a tooltip) | - |
 | Documents | Width | Narrow, Normal, Full | - |
 | Documents | Doc theme | Match, Light, Dark | The same settings as the doc footer. |
 
@@ -101,10 +101,6 @@ The option rows use flexbox rather than a fixed grid, so they can wrap at large 
 - Buttons are equal width while they fit. When they stop fitting, they wrap to a second line and keep their labels whole.
 - The selected style is the existing one: accent border, accent text and the accent hover background.
 
-### Document text stepper
-
-A− and A+ are buttons with a minimum width of 30px and a height of 24px, with the percent centered between them. A button is disabled at the end of the step list. This row keeps a stepper because the document scale has seven steps.
-
 ## Footer and tabs
 
 | Element | Values |
@@ -120,7 +116,7 @@ With the flex row, tabs take their width from their labels. All five fit at XL i
 Four rules keep the tree aligned at every text size:
 
 1. The guide line runs under the center of the chevron.
-2. A file's badge starts where a sibling folder's name starts.
+2. A file's badge starts in the column right after a sibling folder's chevron. That column holds the folder icon when icons are on, and the folder name when they are off.
 3. Everything that belongs to a row grows with `--tree-scale`.
 4. One nesting level moves a row right by exactly the indent, in every indent mode.
 
@@ -128,12 +124,11 @@ Four rules keep the tree aligned at every text size:
 |---|---|
 | Chevron size, `--tree-chev` | `13px × tree scale` |
 | Folder icon size | `15px × tree scale` |
-| Icon's share of the row, `--tree-icon-w` | `15px × tree scale + 0.35rem` when icons are on, `0` when off |
-| Row left padding, `--tree-row-px` | `max(0, min(0.85rem, indent − 6.5px × tree scale))`. Compact and small Custom values shrink it, and Default never does |
+| Row left padding, `--tree-row-px` | `max(0, min(0.85rem, indent − 6.5px × tree scale))`. Indents below about 1.2rem shrink it, which includes Compact and Default |
 | Row padding | `var(--tree-row-py) 0.85rem var(--tree-row-py) var(--tree-row-px)` |
 | Chevron right margin | `0.3rem` |
 | Icon right margin | `0.35rem` |
-| File row left padding | `--tree-row-px + --tree-chev + 0.3rem + --tree-icon-w` |
+| File row left padding | `--tree-row-px + --tree-chev + 0.3rem` |
 | Guide-line x, `--tree-line-x` | `--tree-row-px + 6.5px × tree scale`, in every indent mode |
 | Nested list | `margin-left` is the guide-line x, `padding-left` is `max(0px, indent − guide-line x)`, and the left border is the guide line |
 
@@ -167,12 +162,13 @@ A hovered row measured 9 to 12 brightness levels away from its resting color, on
 
 ### Color tokens
 
-The two tokens need defining in all three theme blocks: the default, the explicit dark attribute and the `prefers-color-scheme: dark` block.
+The three tokens need defining in all three theme blocks: the default, the explicit dark attribute and the `prefers-color-scheme: dark` block.
 
 | Token | Light | Dark |
 |---|---|---|
 | `--zebra` (Subtle) | `rgba(0,0,0,0.022)` | `rgba(255,255,255,0.022)` |
 | `--zebra-strong` (Medium) | `rgba(0,0,0,0.045)` | `rgba(255,255,255,0.045)` |
+| `--tree-line` (guide lines) | `#a0a5ab` | `#585858` |
 
 The existing hover token is `rgba(0,0,0,0.04)` in light and `rgba(255,255,255,0.05)` in dark, which is close to Medium. Painting a stripe as the row's own background would let hover replace it with a nearly equal color, so the hover would not show.
 
@@ -207,7 +203,7 @@ Each size below is multiplied by its scale. All other font sizes in the viewer a
 | Tabs and toolbar | Tab 0.66, filter input 0.74, type filter 0.6, Expand and Collapse 0.62 |
 | Panel footer | Footer text 0.6 |
 | Counts | Folder count pill 0.58 (the sidebar overrides this, see below) |
-| Popover | Title 0.72, section 0.6, label 0.72, toggle label 0.72, sub-option label 0.66, value 0.62, hint 0.6, option 0.62, stepper button 0.66, custom label 0.63, custom input 0.68, unit 0.63, Reset 0.62 |
+| Popover | Title 0.72, section 0.6, label 0.72, toggle label 0.72, sub-option label 0.66, value 0.62, hint 0.6, option 0.62, custom label 0.63, custom input 0.68, unit 0.63, Reset 0.62 |
 | Header | Home button 0.7, site title 0.9, breadcrumb 0.76, search trigger 0.7, its key hint 0.6, Share 0.72, file counter 0.66, Browse 0.7, file name 0.82, info icon 0.6, source links 0.68, segmented buttons 0.64 |
 | Menus and info | Menu item 0.76, menu number 0.6, info popover 0.7, info code 0.66 |
 | Doc footer | Footer 0.64, buttons 0.66 |

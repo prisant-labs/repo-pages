@@ -24,7 +24,7 @@ repo-pages renders Markdown, runs HTML pages, turns CSV files into sortable tabl
   <img src="https://img.shields.io/badge/frontend%20build-none-brightgreen?style=flat-square" alt="Frontend build: none">
   <img src="https://img.shields.io/badge/generator-Python%20stdlib-3776AB?style=flat-square" alt="Generator: Python standard library">
   <a href="#-what-a-reader-gets"><img src="https://img.shields.io/badge/file%20views-8-brightgreen?style=flat-square" alt="File views: 8"></a>
-  <a href="#-project-status"><img src="https://img.shields.io/badge/browser%20checks-64-success?style=flat-square" alt="Browser checks: 64"></a>
+  <a href="https://github.com/prisant-labs/repo-pages/actions/workflows/demo.yml"><img src="https://img.shields.io/github/actions/workflow/status/prisant-labs/repo-pages/demo.yml?branch=main&label=checks&style=flat-square" alt="Checks on main"></a>
 </p>
 
 <a href="https://projects.prisantlabs.com/repo-pages/"><img src="docs/screenshots/overview.png" alt="The repo-pages viewer showing a fictional company's repository: a folder tree on the left, a rendered Markdown policy in the center, and an outline on the right."></a>
@@ -244,7 +244,7 @@ The viewer and generator always ship together, so they cannot get out of step. T
 - **There is nothing to host or copy.** The output is static files, and the viewer loads nothing from the network. Your repository holds one workflow file.
 - **Fixes reach you.** A site that follows `@v1` picks up each release on its next rebuild, and a pinned site can take them as pull requests.
 - **It checks before it publishes.** The action refuses a private repository whose site is public, and it names the exact setting when something is missing.
-- **The demo cannot drift.** Each build uses the viewer and generator from the same commit. It publishes only if the tests and 64 browser checks pass.
+- **The demo cannot drift.** Each build uses the viewer and generator from the same commit. It publishes only if the generator tests, the render check, the browser checks and the setup page check pass.
 - **Untrusted content is treated as data.** Rendered Markdown passes through DOMPurify, and `sandboxHtml` isolates HTML pages you do not fully trust. [SECURITY.md](SECURITY.md) has the details.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -384,7 +384,7 @@ The `if:` skips the rebuild when the bot's run fails. A `workflow_run` run build
 | **Viewer** | One HTML file, plus `marked` and DOMPurify at pinned versions |
 | **Generator** | One Python script, using only the standard library |
 | **Sample** | 88 parody files and a script of 41 commits |
-| **Checks** | Generator tests, 64 browser checks and a setup page check, required on every pull request |
+| **Checks** | Generator tests, a render check, the browser checks and a setup page check, required on every pull request |
 | **License** | [MIT](LICENSE) |
 
 ### Repo structure

@@ -8,6 +8,15 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 - **A setup page, at [projects.prisantlabs.com/repo-pages/setup](https://projects.prisantlabs.com/repo-pages/setup/).** It writes `.github/workflows/repo-pages.yml`, a `.github/repo-pages.json` when a default changes, and a Dependabot file for a pinned commit. It covers every action input, every config key and the common workflow choices, such as pull-request builds and a rebuild after a bot's workflow. It predicts the action's preflight with the action's own messages, and it classifies a pasted `git ls-files -s` with the generator's rules. It runs in the browser and sends nothing anywhere. A new check, `tests/run_setup_checks.mjs`, compares its rules with the generator, the preflight, the template and the sample on every pull request.
 
+### Changed
+
+- **The folder tree is tighter.** Default indentation is now `1rem` per level, down from `1.55rem`, and Compact is `0.7rem`, down from `1rem`. A file's type badge now sits in the same column as a folder icon, so turning on folder icons no longer pushes files to the right.
+- **Document text size uses S, M, L and XL.** The Documents row in the settings is now labeled "Text size" and matches the other two text sizes. The sizes are 80%, 100%, 120% and 150%, and the doc footer's A− and A+ step through the same four. A saved size of 90%, 110% or 135% goes back to 100%.
+
+### Fixed
+
+- **Vertical guide lines are now visible.** They were drawn in the panel's border color, at about 1.2:1 contrast, which made the setting look broken. They now have their own color, at more than 2:1 in both themes.
+
 ## [1.1.0] - 2026-11-22
 
 ### Added
