@@ -17,7 +17,7 @@ repo-pages renders Markdown, runs HTML pages, turns CSV files into sortable tabl
 <p>
   <img src="https://img.shields.io/badge/status-active-success?style=flat-square" alt="Status: Active">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/prisant-labs/repo-pages/releases"><img src="https://img.shields.io/badge/release-v1.1.0-blue?style=flat-square" alt="Latest release v1.1.0"></a>
+  <a href="https://github.com/prisant-labs/repo-pages/releases"><img src="https://img.shields.io/badge/release-v1.2.0-blue?style=flat-square" alt="Latest release v1.2.0"></a>
   <a href="https://projects.prisantlabs.com/repo-pages/"><img src="https://img.shields.io/badge/demo-live-success?style=flat-square" alt="Live demo"></a>
   <a href="https://github.com/prisant-labs/repo-pages/actions/workflows/demo.yml"><img src="https://github.com/prisant-labs/repo-pages/actions/workflows/demo.yml/badge.svg" alt="Demo workflow status"></a>
   <img src="https://img.shields.io/badge/server-none-brightgreen?style=flat-square" alt="Server: none">
@@ -124,7 +124,7 @@ git add .github/workflows/repo-pages.yml && git commit -m "Publish with repo-pag
 
 That is the whole install. The [workflow](templates/repo-pages.yml) is one small file, and the viewer and generator come from the action. If your default branch is not `main`, change the branch name in the workflow. Each run's summary page lists every file it published, so you can check what went public.
 
-To choose options first, use the **[setup page](https://projects.prisantlabs.com/repo-pages/setup/)**. It writes the workflow, a `repo-pages.json` when you change a default, and a Dependabot file when you pin a commit. It predicts what the action's preflight will say, and it shows which files would publish when you paste `git ls-files -s`. The page runs in your browser and sends nothing anywhere.
+To choose options first, use the **[setup page](https://projects.prisantlabs.com/repo-pages/setup/)**. It writes the workflow, a `repo-pages.json` when you change a default, and a Dependabot file when you pin a commit. It predicts what the action's preflight will say, and it shows which files would publish when you paste `git ls-files -s`. The page runs in your browser and sends nothing anywhere. It follows the latest release, which it names at the top.
 
 ### Publish with a coding agent
 
@@ -217,7 +217,7 @@ python3 -m http.server 8000 --directory _site
 A site picks up a new version when it rebuilds. Choose how much control you want:
 
 - **Follow `@v1` (the default).** Each rebuild uses the latest `v1` release, so fixes arrive by themselves. A quiet repository rebuilds rarely, so the workflow has a weekly `schedule` line you can uncomment.
-- **Pin a commit.** Reference a full commit SHA, and add a version comment on the same line. Nothing changes until you accept it. [Dependabot](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/keeping-your-actions-up-to-date-with-dependabot) can open a pull request for each release:
+- **Pin a commit.** Reference a full commit SHA, and add a version comment on the same line. Nothing changes until you accept it. To move the pin by hand, use the commit that the release's tag points to, which the release page shows. [Dependabot](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain/secure-your-dependencies/keeping-your-actions-up-to-date-with-dependabot) can open a pull request for each release:
 
   ```yaml
   # .github/dependabot.yml
@@ -377,7 +377,7 @@ The `if:` skips the rebuild when the bot's run fails. A `workflow_run` run build
 
 |  |  |
 |---|---|
-| **Latest release** | [v1.1.0](https://github.com/prisant-labs/repo-pages/releases/tag/v1.1.0) |
+| **Latest release** | [v1.2.0](https://github.com/prisant-labs/repo-pages/releases/tag/v1.2.0) |
 | **Install** | One workflow file, using `prisant-labs/repo-pages@v1` |
 | **Live demo** | [projects.prisantlabs.com/repo-pages](https://projects.prisantlabs.com/repo-pages/), rebuilt from `main` |
 | **Setup page** | [projects.prisantlabs.com/repo-pages/setup](https://projects.prisantlabs.com/repo-pages/setup/), one HTML file published with the demo |
