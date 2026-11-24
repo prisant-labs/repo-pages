@@ -4,7 +4,7 @@ Instructions for any AI agent working in this repository. `CLAUDE.md` is a thin 
 
 ## Project map
 
-repo-pages turns a git repository into a static website where every file is readable. [docs/architecture.md](docs/architecture.md) explains how the parts fit together. Write the name as `repo-pages` in prose and code, and as "Repo Pages" in page titles and on the projects hub. Storage keys use the `rp.` prefix.
+repo-pages turns a git repository into a static website where every file is readable. [docs/architecture.md](docs/architecture.md) explains how the parts fit together. Write the name as `repo-pages` in prose and code, and as "Repo Pages" in page titles and on the projects hub. Storage keys use the `rp.` prefix, and the setup page's use `rps.`.
 
 | Path | What it is |
 |---|---|
@@ -14,8 +14,9 @@ repo-pages turns a git repository into a static website where every file is read
 | `generator/` | `build_site.py`, `preflight.py` and their tests, using only the Python standard library |
 | `tests/vendor-watch/` | A list of vendored versions for Dependabot. Nothing installs it |
 | `templates/repo-pages.yml` | The one workflow file adopters add to their repository |
+| `setup/index.html` | The setup page, a form that writes an adopter's files. `demo.yml` publishes it at `/repo-pages/setup/` |
 | `examples/` | The Initech parody sample, its commit script and `build_demo.py` |
-| `tests/` | Browser checks and their runner |
+| `tests/` | Browser checks, the setup page check and their runners |
 | `docs/` | Features, settings spec, design notes, architecture and ideas |
 | `_local/` | Gitignored working notes. Never commit it |
 
@@ -28,9 +29,10 @@ npm install --no-save --no-package-lock playwright
 node tests/run_browser_checks.mjs
 python3 generator/build_site.py --viewer viewer --out /tmp/repo-pages-site
 node tests/run_render_check.mjs /tmp/repo-pages-site
+node tests/run_setup_checks.mjs
 ```
 
-Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. The generator tests, the browser checks on the demo and the render check on an ordinary build must all pass before a merge, and `.github/workflows/demo.yml` repeats them on every pull request. In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` before passing a `#/p/...` route to either runner. The "Protect main" ruleset blocks direct pushes to `main`, allows squash merges only, and requires the workflow's `build` check. Read the results rather than assuming them.
+Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedge` or `chrome` to use an installed browser instead of downloading Chromium. The generator tests, the browser checks on the demo, the render check on an ordinary build and the setup check must all pass before a merge, and `.github/workflows/demo.yml` repeats them on every pull request. In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` before passing a `#/p/...` route to either runner. The "Protect main" ruleset blocks direct pushes to `main`, allows squash merges only, and requires the workflow's `build` check. Read the results rather than assuming them.
 
 ## Rules
 
@@ -54,7 +56,8 @@ Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedg
 | What gets published, or how untrusted files are handled | `SECURITY.md` and the README FAQ |
 | A vendored library | `viewer/vendor/README.md`, `THIRD-PARTY-NOTICES.md` and `tests/vendor-watch/package.json` |
 | Commands or repository rules | This file |
-| The action, its inputs or the config keys | `templates/repo-pages.yml`, `docs/architecture.md`, and the README's Quick start, agent prompt and FAQ |
+| The action, its inputs or the config keys | `templates/repo-pages.yml`, `docs/architecture.md`, `setup/index.html`, and the README's Quick start, agent prompt and FAQ |
+| The template, preflight messages or publish rules | `setup/index.html`. The setup check fails until the page matches |
 
 ## Releases
 
@@ -63,6 +66,7 @@ Pushing tags and creating releases needs the maintainer's yes. After the release
 1. Move the "Unreleased" entries in `CHANGELOG.md` to a new version, and update the version in the README badge and status table. Do this in the release pull request.
 2. Tag the squash commit `vX.Y.Z`, and move the major tag `vX` to the same commit. Adopters who use `@vX` get the release on their next rebuild.
 3. Create the GitHub release from `vX.Y.Z`.
+4. In a small pull request, set `RELEASE` in `setup/index.html` to the new tag and `git rev-parse vX.Y.Z^{commit}`. The setup check fails on every pull request until this lands.
 
 ## Sample content
 

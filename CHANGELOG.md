@@ -4,6 +4,10 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
+### Added
+
+- **A setup page, at [projects.prisantlabs.com/repo-pages/setup](https://projects.prisantlabs.com/repo-pages/setup/).** It writes `.github/workflows/repo-pages.yml`, a `.github/repo-pages.json` when a default changes, and a Dependabot file for a pinned commit. It covers every action input, every config key and the common workflow choices, such as pull-request builds and a rebuild after a bot's workflow. It predicts the action's preflight with the action's own messages, and it classifies a pasted `git ls-files -s` with the generator's rules. It runs in the browser and sends nothing anywhere. A new check, `tests/run_setup_checks.mjs`, compares its rules with the generator, the preflight, the template and the sample on every pull request.
+
 ### Changed
 
 - **The folder tree is tighter.** Default indentation is now `1rem` per level, down from `1.55rem`, and Compact is `0.7rem`, down from `1rem`. A file's type badge now sits in the same column as a folder icon, so turning on folder icons no longer pushes files to the right.
@@ -12,6 +16,21 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 ### Fixed
 
 - **Vertical guide lines are now visible.** They were drawn in the panel's border color, at about 1.2:1 contrast, which made the setting look broken. They now have their own color, at more than 2:1 in both themes.
+
+## [1.1.0] - 2026-11-22
+
+### Added
+
+- **A `require-private-site` input.** Set it to `"true"` to publish only when the GitHub Pages site is private. The run stops before deploying if the site is public, or if GitHub does not say, whatever the repository's visibility. `allow-private-repository` does not override it. A value other than `"true"` or `"false"` stops the run, so a typo cannot turn it off. It replaces the guard step that some adopters wrote by hand.
+
+### Changed
+
+- **A private site publishes without a setting.** The action now checks whether the GitHub Pages site is public, not whether the repository is private. A private repository whose site is private, which needs GitHub Enterprise Cloud, now publishes. Before, it was refused unless `allow-private-repository` was `"true"`. A private repository whose site is public is still refused by default. If GitHub does not say whether the site is public, the action treats it as public. A repository with internal visibility counts as private, and the error messages say so.
+- **`marked` is now 18.2.1.** Upstream fixes edge cases in block quotes, lazy lines, tabs, task items, link destinations in angle brackets and code spans inside link text. It also keeps trailing blank lines in fenced code. Every Markdown file in this repository renders to the same HTML as with 18.2.0, but a file that relies on one of those edge cases can render differently.
+
+### Security
+
+- **Hostile Markdown is even less able to slow a reader's tab.** `marked` 18.2.1 follows up the 18.1.3 fix. It closes a remaining case of quadratic parse time on runs of unmatched emphasis and strikethrough delimiters.
 
 ## [1.0.2] - 2026-11-20
 

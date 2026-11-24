@@ -49,6 +49,7 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 - Browser checks for settings behavior, which the runner counts on every run.
 - A workflow that runs the tests and checks on every relevant change, and publishes the demo from `main`.
 - A GitHub Action that publishes any repository from one workflow file, with checks before it publishes and a list of what went public.
+- A [setup page](https://projects.prisantlabs.com/repo-pages/setup/) that writes the workflow and config files from a form. A check compares its rules with the code on every pull request.
 - Versioned releases, with a major tag that adopters can follow.
 
 ## Not built yet

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import re
@@ -9,6 +11,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 SCRIPT = Path(__file__).resolve().parent / "build_site.py"
@@ -333,6 +336,169 @@ class PreflightTests(unittest.TestCase):
     def test_missing_permissions_are_named(self):
         self.assertIn("id-token: write", self.run_check(env={})[0])
         self.assertIn("pages: write", self.run_check(pages=(403, {}))[0])
+
+
+MISSING = object()
+
+
+class PrivateSiteTests(unittest.TestCase):
+    """What decides publishing is whether the site is public, not whether the repository is private."""
+
+    REPO = "owner/name"
+    SETTINGS = "https://github.com/owner/name/settings/pages"
+    ENV = {"ACTIONS_ID_TOKEN_REQUEST_URL": "https://token"}
+    VISIBILITIES = ("public", "private", "internal")
+
+    def fake_fetch(self, visibility, public=MISSING, pages_status=200, calls=None):
+        pages = {"build_type": "workflow"}
+        if public is not MISSING:
+            pages["public"] = public
+        repo = {"private": visibility != "public", "visibility": visibility}
+
+        def fetch(path):
+            if calls is not None:
+                calls.append(path)
+            if path.endswith("/pages"):
+                return pages_status, pages if pages_status == 200 else {}
+            return 200, repo
+
+        return fetch
+
+    def run_check(self, visibility="private", public=MISSING, allow=False, require=False, pages_status=200):
+        fetch = self.fake_fetch(visibility, public, pages_status)
+        return preflight.check(fetch, self.REPO, "https://github.com", self.ENV, allow, require_private=require)
+
+    def test_a_public_repository_publishes_whatever_the_site_reports(self):
+        for public in (True, False, MISSING, "false", None):
+            with self.subTest(public=public):
+                self.assertEqual(self.run_check("public", public), [])
+
+    def test_a_private_site_publishes_without_a_flag(self):
+        for visibility in ("private", "internal"):
+            with self.subTest(visibility=visibility):
+                self.assertEqual(self.run_check(visibility, public=False), [])
+
+    def test_a_public_site_of_a_private_repository_is_refused(self):
+        for visibility in ("private", "internal"):
+            with self.subTest(visibility=visibility):
+                errors = self.run_check(visibility, public=True)
+                self.assertEqual(len(errors), 1)
+                self.assertIn("Its GitHub Pages site is public", errors[0])
+                self.assertIn(self.SETTINGS, errors[0])
+                self.assertIn('set allow-private-repository to "true"', errors[0])
+
+    def test_a_missing_or_odd_public_value_counts_as_public(self):
+        for public in (MISSING, None, "false", 0, "no"):
+            with self.subTest(public=public):
+                errors = self.run_check("private", public)
+                self.assertEqual(len(errors), 1)
+                self.assertIn("did not report whether", errors[0])
+                self.assertIn("treats it as public", errors[0])
+                self.assertIn('set allow-private-repository to "true"', errors[0])
+
+    def test_allow_private_repository_still_publishes_a_public_site(self):
+        for visibility in ("private", "internal"):
+            for public in (True, MISSING):
+                with self.subTest(visibility=visibility, public=public):
+                    self.assertEqual(self.run_check(visibility, public, allow=True), [])
+
+    def test_an_internal_repository_says_it_counts_as_private(self):
+        for public in (True, MISSING):
+            with self.subTest(public=public):
+                error = self.run_check("internal", public)[0]
+                self.assertIn("This repository has internal visibility, which GitHub counts as private.", error)
+        self.assertNotIn("internal", self.run_check("private", True)[0])
+
+    def test_require_private_site_with_every_visibility_and_public_value(self):
+        for visibility in self.VISIBILITIES:
+            for public in (True, False, MISSING):
+                with self.subTest(visibility=visibility, public=public):
+                    errors = self.run_check(visibility, public, require=True)
+                    if public is False:
+                        self.assertEqual(errors, [])
+                        continue
+                    self.assertEqual(len(errors), 1)
+                    self.assertIn('require-private-site is "true"', errors[0])
+                    if visibility == "public":
+                        self.assertIn("a site from a public repository is always public", errors[0])
+                    elif public is True:
+                        self.assertIn("GitHub Pages site is public", errors[0])
+                        self.assertIn(self.SETTINGS, errors[0])
+                        self.assertIn('gh api -X PUT "repos/owner/name/pages" -F public=false', errors[0])
+                        self.assertIn("GitHub Enterprise Cloud", errors[0])
+                        self.assertIn("remove require-private-site", errors[0])
+                    else:
+                        self.assertIn("did not report whether", errors[0])
+                        self.assertIn("remove require-private-site", errors[0])
+
+    def test_allow_private_repository_does_not_override_require_private_site(self):
+        for visibility in ("private", "internal"):
+            for public in (True, MISSING):
+                with self.subTest(visibility=visibility, public=public):
+                    errors = self.run_check(visibility, public, allow=True, require=True)
+                    self.assertEqual(len(errors), 1)
+                    self.assertIn("require-private-site", errors[0])
+                    self.assertNotIn("allow-private-repository", errors[0])
+        self.assertEqual(self.run_check("private", False, allow=True, require=True), [])
+
+    def test_unreadable_pages_settings_still_stop_the_run_with_their_own_fix(self):
+        expected = {404: "not turned on", 403: "pages: write", 500: "HTTP 500", 0: "HTTP 0"}
+        for status, fix in expected.items():
+            for require in (False, True):
+                with self.subTest(status=status, require=require):
+                    errors = self.run_check("private", pages_status=status, require=require)
+                    self.assertEqual(len(errors), 1)
+                    self.assertIn(fix, errors[0])
+
+    def test_the_pages_settings_are_read_once(self):
+        calls = []
+        preflight.check(self.fake_fetch("private", False, calls=calls), self.REPO, "https://github.com", self.ENV, False)
+        self.assertEqual(calls, ["repos/owner/name", "repos/owner/name/pages"])
+
+
+class PreflightMainTests(unittest.TestCase):
+    """CI runs the action in build-only mode, so preflight never runs there. These cover the wiring."""
+
+    root = SCRIPT.parent.parent
+
+    def run_main(self, public, require=None, allow=None):
+        pages = {"build_type": "workflow", "public": public}
+
+        def fetch(path):
+            return (200, pages) if path.endswith("/pages") else (200, {"private": True, "visibility": "private"})
+
+        env = {"GITHUB_REPOSITORY": "owner/name", "ACTIONS_ID_TOKEN_REQUEST_URL": "https://token"}
+        if require is not None:
+            env["REPO_PAGES_REQUIRE_PRIVATE_SITE"] = require
+        if allow is not None:
+            env["REPO_PAGES_ALLOW_PRIVATE"] = allow
+        out = io.StringIO()
+        with mock.patch.dict(os.environ, env, clear=True), \
+                mock.patch.object(preflight, "github_fetch", return_value=fetch), \
+                contextlib.redirect_stdout(out):
+            code = preflight.main()
+        return code, out.getvalue()
+
+    def test_the_action_passes_require_private_site_to_preflight(self):
+        text = (self.root / "action.yml").read_text(encoding="utf-8")
+        self.assertRegex(text, r"(?m)^  require-private-site:\n    description: .+\n    default: 'false'$")
+        self.assertIn("REPO_PAGES_REQUIRE_PRIVATE_SITE: ${{ inputs.require-private-site }}", text)
+
+    def test_main_reads_require_private_site(self):
+        self.assertEqual(self.run_main(public=False), (0, ""))
+        self.assertEqual(self.run_main(public=False, require="false")[0], 0)
+        for value in ("true", " TRUE "):
+            with self.subTest(value=value):
+                code, out = self.run_main(public=True, require=value, allow="true")
+                self.assertEqual(code, 1)
+                self.assertIn('::error title=Repo Pages::require-private-site is "true"', out)
+
+    def test_an_unrecognized_require_private_site_value_stops_the_run(self):
+        for value in ("yes", "ture", "1"):
+            with self.subTest(value=value):
+                code, out = self.run_main(public=False, require=value)
+                self.assertEqual(code, 1)
+                self.assertIn(f'require-private-site must be "true" or "false", not "{value}"', out)
 
 
 class RepositoryTests(unittest.TestCase):

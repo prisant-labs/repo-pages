@@ -36,6 +36,19 @@ None of these are commitments. Each idea says what it would give a reader and wh
 | **Diff view for Markdown** | See what changed in a doc, not only that it changed | Link to the GitHub compare view first. A rendered diff later |
 | **Weekly digest** | A Slack post with the files added and updated that week | A scheduled workflow that reads the data file |
 
+## Seeing at a glance
+
+Every idea here draws plain SVG in the viewer, so none of them loads anything from the network or needs a charting library. Map views for GeoJSON are left out, because map tiles come from a network server.
+
+| Idea | What the reader gets | What it takes |
+|---|---|---|
+| **Charts for CSV files** | A Chart toggle beside the sortable table. Dates against numbers draw a line, and categories against numbers draw bars. The reader can change the columns | Guess column types from the values, which is the fiddly part. The sample's ledger, market sizing and requisition files make good test cases |
+| **Repository treemap** | The whole repository as nested rectangles, sized by bytes and colored by file type or by age. Clicking opens a file or zooms into a folder | A squarified layout over the data file's paths and sizes. One large binary can dwarf the documents, so the view needs a way to cap or set aside outliers |
+| **Freshness coloring** | The tree and folder tables tint each file by the age of its last change, so stale docs stand out | Each file's last-commit date is already in the data file. It is a reader setting, so it goes through `KEYS` and `PREF_SPEC`, and the tint must not disturb the tree geometry |
+| **Activity heatmap** | A calendar of commits by day on the Updated or Authors tab | The data file keeps only recent commits and the commits that files point at, so a heatmap built from it would be biased. The generator would add a per-day commit count to the data file |
+| **Link graph** | A small map of the documents that one file links to and that link to it | Needs the link collection that backlinks would add. Start with one file's neighborhood, because a whole-site graph turns into a tangle past about a hundred files |
+| **Who last touched each folder** | A bar on a folder page showing who made the latest change to each file | The data file holds only the last author of each file, so label it as recent activity, not ownership |
+
 ## Sharing and trust
 
 | Idea | What the reader gets | What it takes |
@@ -43,7 +56,7 @@ None of these are commitments. Each idea says what it would give a reader and wh
 | **Open on GitHub, Raw, History** (built) | One click from any page to its source, its raw file and its commits | Build the URLs from `config.repoUrl` and the path |
 | **Last-commit stamp** (built) | Each file shows who changed it last, when, and in which commit | From the generator's `git log` pass |
 | **Broken link report** | A list of links in docs that point at missing files | Check relative links in the generator and fail or warn |
-| **Private-site alert** | The workflow fails loudly if the Pages site is not private. It detects exposure but cannot undo it | One call to the Pages API on each run |
+| **Private-site alert** (built) | The workflow fails loudly if the Pages site is not private. It detects exposure but cannot undo it | The action's `require-private-site` input, which reads the Pages settings on each run |
 
 ## More ideas
 
@@ -72,7 +85,6 @@ None of these are commitments. Each idea says what it would give a reader and wh
 
 | Idea | What the reader gets | What it takes |
 |---|---|---|
-| **Setup page** (in prototype) | A guided page that writes the two config files for a new repo | A static form that renders the YAML and JSON |
 | **Preview deploys for pull requests** | Reviewers see the site as it will look after the merge | Upload the built site as a workflow artifact, or deploy to a second Pages environment |
 | **A hub of sites** (in prototype) | One page listing every repo that uses Repo Pages, with viewer versions, build health and privacy | A scheduled workflow reads the Pages and Actions APIs for each repo and writes the hub's data file |
 | **Agent index** | An `llms.txt` and a JSON index at the site root, so agents can find and cite files | Written by the generator next to the data file |

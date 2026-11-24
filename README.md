@@ -17,7 +17,7 @@ repo-pages renders Markdown, runs HTML pages, turns CSV files into sortable tabl
 <p>
   <img src="https://img.shields.io/badge/status-active-success?style=flat-square" alt="Status: Active">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=flat-square" alt="License: MIT"></a>
-  <a href="https://github.com/prisant-labs/repo-pages/releases"><img src="https://img.shields.io/badge/release-v1.0.2-blue?style=flat-square" alt="Latest release v1.0.2"></a>
+  <a href="https://github.com/prisant-labs/repo-pages/releases"><img src="https://img.shields.io/badge/release-v1.1.0-blue?style=flat-square" alt="Latest release v1.1.0"></a>
   <a href="https://projects.prisantlabs.com/repo-pages/"><img src="https://img.shields.io/badge/demo-live-success?style=flat-square" alt="Live demo"></a>
   <a href="https://github.com/prisant-labs/repo-pages/actions/workflows/demo.yml"><img src="https://github.com/prisant-labs/repo-pages/actions/workflows/demo.yml/badge.svg" alt="Demo workflow status"></a>
   <img src="https://img.shields.io/badge/server-none-brightgreen?style=flat-square" alt="Server: none">
@@ -80,7 +80,7 @@ flowchart LR
 | **Built from git** - the tabs and dates come from your commits | A site whose navigation you maintain by hand |
 | **Static** - GitHub Pages or any file host can serve it | A service to run, or a database to keep alive |
 | **Small** - one HTML file and one Python script, with no frontend build | An npm project with a dependency tree to maintain |
-| **Public once published** - see the [FAQ](#-faq) before you deploy | A private wiki |
+| **As private as GitHub Pages allows** - public by default, or limited to the repository's readers on GitHub Enterprise Cloud. See the [FAQ](#-faq) | Access control of its own: anyone who can open the site can read every page |
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -111,7 +111,7 @@ Then open `http://localhost:8000`. On Windows, use `python` if `python3` is not 
 ### Publish in four commands
 
 > [!WARNING]
-> repo-pages publishes nearly every tracked file, and a GitHub Pages site can be public even when its repository is private. Read the [FAQ](#-faq) first. The action refuses a private repository unless you tell it otherwise.
+> repo-pages publishes nearly every tracked file. A GitHub Pages site is public on the internet, even when its repository is private, unless your plan has private sites. Read the [FAQ](#-faq) first. The action refuses a private repository whose site is public, unless you tell it otherwise.
 
 Run these in the repository you want to publish. The `gh` command needs the [GitHub CLI](https://cli.github.com), or you can set **Settings > Pages > Source** to **GitHub Actions** instead.
 
@@ -123,6 +123,8 @@ git add .github/workflows/repo-pages.yml && git commit -m "Publish with repo-pag
 ```
 
 That is the whole install. The [workflow](templates/repo-pages.yml) is one small file, and the viewer and generator come from the action. If your default branch is not `main`, change the branch name in the workflow. Each run's summary page lists every file it published, so you can check what went public.
+
+To choose options first, use the **[setup page](https://projects.prisantlabs.com/repo-pages/setup/)**. It writes the workflow, a `repo-pages.json` when you change a default, and a Dependabot file when you pin a commit. It predicts what the action's preflight will say, and it shows which files would publish when you paste `git ls-files -s`. The page runs in your browser and sends nothing anywhere.
 
 ### Publish with a coding agent
 
@@ -136,9 +138,13 @@ Stop and wait for my answer at each step marked STOP.
 Work on a new branch, and do not push to the default branch.
 
 1. Show me what would go public.
-   - Tell me this repository's visibility. A GitHub Pages site can be public on the
-     internet even when its repository is private, so the action refuses a private
-     repository unless `allow-private-repository` is "true".
+   - Tell me this repository's visibility, and whether its GitHub Pages site is
+     public or private. A site can be public on the internet even when its
+     repository is private. The action publishes a repository that is private or
+     has internal visibility only when its site is private, or when
+     `allow-private-repository` is "true".
+   - If the site must stay private, offer to set `require-private-site` to "true",
+     which stops any deploy while the site is public.
    - Run `git ls-files`. repo-pages publishes every tracked file, except `.github/**`,
      hidden files, symlinks and submodules.
    - Point out anything that looks like a secret, personal data or a private note.
@@ -152,9 +158,13 @@ Work on a new branch, and do not push to the default branch.
    - Download https://raw.githubusercontent.com/prisant-labs/repo-pages/v1/templates/repo-pages.yml
      to `.github/workflows/repo-pages.yml`. If this repository's default branch is not
      `main`, change the branch there.
+   - If I chose `require-private-site`, add it under `with:` as the workflow's
+     comment shows.
    - If I named exclusions or a title, write `.github/repo-pages.json` with the keys
      `title` and `exclude`. If this repository holds HTML I may not fully trust, add
      `"sandboxHtml": true` and tell me.
+   - If I made the files with the setup page at
+     https://projects.prisantlabs.com/repo-pages/setup/, use mine instead, and still show me what they change.
 
 3. Open a pull request.
 
@@ -188,8 +198,11 @@ The title defaults to the repository's name. `includeHidden` and `sandboxHtml` t
 | Input | Default | What it does |
 |---|---|---|
 | `deploy` | `true` | Set to `false` to build without publishing, for example on pull requests |
-| `allow-private-repository` | `false` | Set to `true` to publish from a private repository |
+| `allow-private-repository` | `false` | Set to `true` to publish a private repository whose site is public. A private site needs no setting |
+| `require-private-site` | `false` | Set to `true` to publish only when the site is private. `allow-private-repository` does not override it. Any value other than `true` or `false` stops the run |
 | `token` | `github.token` | The token for the repository checks, checkout and deployment |
+
+The [setup page](https://projects.prisantlabs.com/repo-pages/setup/) writes both files from a form and checks each value with the generator's own rules.
 
 To preview a site on your own machine, build it from a clone of this repository, and do not commit `_site/`:
 
@@ -230,8 +243,8 @@ The viewer and generator always ship together, so they cannot get out of step. T
 - **History is part of the interface.** The New, Updated, Authors and History tabs come straight from commits, so they need no front matter or upkeep.
 - **There is nothing to host or copy.** The output is static files, and the viewer loads nothing from the network. Your repository holds one workflow file.
 - **Fixes reach you.** A site that follows `@v1` picks up each release on its next rebuild, and a pinned site can take them as pull requests.
-- **It checks before it publishes.** The action refuses a private repository by default, and it names the exact setting when something is missing.
-- **The demo cannot drift.** Each build uses the viewer and generator from the same commit. It publishes only if the generator tests, the render check and the browser checks pass.
+- **It checks before it publishes.** The action refuses a private repository whose site is public, and it names the exact setting when something is missing.
+- **The demo cannot drift.** Each build uses the viewer and generator from the same commit. It publishes only if the generator tests, the render check, the browser checks and the setup page check pass.
 - **Untrusted content is treated as data.** Rendered Markdown passes through DOMPurify, and `sandboxHtml` isolates HTML pages you do not fully trust. [SECURITY.md](SECURITY.md) has the details.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -270,19 +283,49 @@ The viewer and generator always ship together, so they cannot get out of step. T
 
 **Do HTML files run?** Yes, on the site's own origin by default. Set `sandboxHtml` to `true` if you publish HTML you do not fully trust. [SECURITY.md](SECURITY.md) explains why.
 
-**Is the site private?** Not by default. A GitHub Pages site is public on the internet even when its repository is private. GitHub offers access-controlled Pages only on certain plans, so check GitHub's current rules before you publish anything sensitive.
+**Is the site private?** Only if your GitHub plan has private sites. A GitHub Pages site is public on the internet, even when its repository is private, except on GitHub Enterprise Cloud. There, an organization can make a repository's site private when the repository is private or has internal visibility. Only people with read access to the repository can then open it. A private site gets a different URL, unless it uses a custom domain. repo-pages publishes a private site with no extra setting.
+
+To keep the site private, add `require-private-site: 'true'` under `with:` in the workflow, where the template has it commented out. Each run then stops before deploying if the site is public. It cannot hide a site that someone has already made public, and runs with `deploy: false` skip the check. Check GitHub's current rules before you publish anything sensitive.
 
 **Why does the Updated tab show one author for everything?** The site was built from a shallow clone. Build with full history.
 
-**How current is the live demo?** A workflow rebuilds it on every push to `main` that touches the viewer, generator, sample or checks. It publishes only if the tests and browser checks pass.
+**How current is the live demo?** A workflow rebuilds it on every push to `main` that touches the viewer, generator, sample, checks, setup page or template. It publishes only if the tests and browser checks pass.
+
+**Is there a form that writes the files?** Yes. The [setup page](https://projects.prisantlabs.com/repo-pages/setup/) covers every action input, every config key and the common workflow choices. Its rules are copied from the action, the generator and the template, and a check compares them with the code on every pull request, so they cannot drift. It runs in your browser, sends nothing anywhere, and remembers only its theme and tab.
 
 **Are reader settings shared between readers?** No. They live in each reader's browser storage. If storage is blocked, the defaults apply.
 
 **How do I get fixes, including security fixes?** A workflow that uses `@v1` picks them up on its next rebuild. A workflow pinned to a commit needs that pin updated. [Get updates](#get-updates) compares the options.
 
-**Can I publish from a private repository?** Only if your GitHub plan allows it, and you set `allow-private-repository` to `true`. The action refuses by default, because the site can be public even so.
+**Can I publish from a private repository?** Yes. The action checks whether the site is public, not whether the repository is private. A private repository with a private site publishes with no setting. A private repository with a public site is refused, because anyone on the internet could read it. To publish it publicly anyway, set `allow-private-repository` to `true`. A repository with internal visibility counts as private, because GitHub reports it as private.
 
-**What can make the workflow fail?** The action's error names the fix in three cases. GitHub Pages is off or set to a branch, the job lacks `id-token: write`, or the repository is private. A missing `pages: write` fails at deployment, and GitHub's message names it. A top-level `index.html` or `site-data.json` collides with the viewer, so exclude or rename it.
+**What can make the workflow fail?** The action's error names the fix in each of these cases:
+
+- GitHub Pages is off or set to a branch.
+- The job lacks `id-token: write`.
+- A private repository's site is public, or GitHub does not say whether it is.
+- `require-private-site` is on and the site is not private.
+
+A missing `pages: write` fails at deployment, and GitHub's message names it. A top-level `index.html` or `site-data.json` collides with the viewer, so exclude or rename it.
+
+**Why did a bot's commit not update the site?** A commit pushed by a workflow with `GITHUB_TOKEN` does not start other workflows. So a bot that commits to `main`, such as a changelog generator, does not rebuild the site. Add a `workflow_run` trigger for the bot's workflow to `.github/workflows/repo-pages.yml`. Use the `name:` from the top of the bot's workflow file:
+
+```yaml
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Changelog]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  publish:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+```
+
+The `if:` skips the rebuild when the bot's run fails. A `workflow_run` run builds the latest commit on the default branch, so it includes the bot's commit.
 
 **Which runners does it support?** It is tested on `ubuntu-latest`. It needs `python3` 3.10 or later and `bash` on the runner.
 
@@ -296,6 +339,7 @@ The viewer and generator always ship together, so they cannot get out of step. T
 |---|---|
 | See it working | The [live demo](https://projects.prisantlabs.com/repo-pages/) |
 | Publish your repository | [Four commands](#publish-in-four-commands) or [a coding agent](#publish-with-a-coding-agent) |
+| Choose options in a form | The [setup page](https://projects.prisantlabs.com/repo-pages/setup/) |
 | Control how updates arrive | [Get updates](#get-updates) |
 | Decide whether a site is safe to publish | The [FAQ](#-faq) and [SECURITY.md](SECURITY.md) |
 | Know every setting a reader can change | [docs/settings-spec.md](docs/settings-spec.md) |
@@ -333,13 +377,14 @@ The viewer and generator always ship together, so they cannot get out of step. T
 
 |  |  |
 |---|---|
-| **Latest release** | [v1.0.2](https://github.com/prisant-labs/repo-pages/releases/tag/v1.0.2) |
+| **Latest release** | [v1.1.0](https://github.com/prisant-labs/repo-pages/releases/tag/v1.1.0) |
 | **Install** | One workflow file, using `prisant-labs/repo-pages@v1` |
 | **Live demo** | [projects.prisantlabs.com/repo-pages](https://projects.prisantlabs.com/repo-pages/), rebuilt from `main` |
+| **Setup page** | [projects.prisantlabs.com/repo-pages/setup](https://projects.prisantlabs.com/repo-pages/setup/), one HTML file published with the demo |
 | **Viewer** | One HTML file, plus `marked` and DOMPurify at pinned versions |
 | **Generator** | One Python script, using only the standard library |
 | **Sample** | 88 parody files and a script of 41 commits |
-| **Checks** | Generator tests, a render check and the settings browser checks, required on every pull request |
+| **Checks** | Generator tests, a render check, the browser checks and a setup page check, required on every pull request |
 | **License** | [MIT](LICENSE) |
 
 ### Repo structure
@@ -351,8 +396,9 @@ repo-pages/
 │   └── vendor/            #   pinned copies of marked and DOMPurify
 ├── generator/             # build_site.py, preflight.py and their tests
 ├── templates/             # the workflow to copy into your repository
+├── setup/                 # the setup page, published beside the demo
 ├── examples/              # the Initech sample and the demo build
-├── tests/                 # browser checks, their runner, and the vendor watch list
+├── tests/                 # browser checks, the setup check, their runners, and the vendor watch list
 ├── docs/                  # features, settings, design, architecture and ideas
 ├── .github/               # the demo workflow, Dependabot, and issue forms
 ├── CHANGELOG.md

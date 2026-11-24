@@ -16,7 +16,10 @@ inputs:
     description: Set to "false" to build without publishing, for example on pull requests.
     default: 'true'
   allow-private-repository:
-    description: Set to "true" to publish from a private repository. The site can still be public on the internet.
+    description: Set to "true" to publish a private repository whose site is public on the internet. A private site needs no setting.
+    default: 'false'
+  require-private-site:
+    description: Set to "true" to publish only when the GitHub Pages site is private. allow-private-repository does not override it.
     default: 'false'
   token:
     description: The token for the repository checks, checkout and deployment.
@@ -39,6 +42,7 @@ runs:
       env:
         REPO_PAGES_TOKEN: ${{ inputs.token }}
         REPO_PAGES_ALLOW_PRIVATE: ${{ inputs.allow-private-repository }}
+        REPO_PAGES_REQUIRE_PRIVATE_SITE: ${{ inputs.require-private-site }}
       run: python3 "$GITHUB_ACTION_PATH/generator/preflight.py"
 
     - name: Check out the repository
