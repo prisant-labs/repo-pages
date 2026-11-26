@@ -4,6 +4,16 @@ All notable changes to repo-pages are documented here. The format follows [Keep 
 
 ## [Unreleased]
 
+This release adds a generated file to every site and changes no action input or config key, so it is a minor release. No workflow or `repo-pages.json` needs editing.
+
+### Added
+
+- **Referenced by.** A file that other documents on the site link to gets a "Referenced by" button in its header. The button works on every file type, so a PDF, a CSV or an image can say where it is used. It lists each referring document with the heading and sentence that hold the link, and each entry opens the document at that section. The generator collects the links from published Markdown, in Markdown syntax and as HTML `<a href>` and `<img src>`. It writes them to `_viewer/refs.json` and lists that file under a new `outputs` key in `site-data.json`. Links to unpublished files are never recorded, so an excluded file's name cannot appear. Each file lists at most 25 referring documents, and the button counts the rest.
+
+### Changed
+
+- **Images in Markdown follow renames, like links do.** An image path now drops any `?query` or `#fragment` and follows the rename map, so an image moved in git still shows. The generator uses the same rules, so Referenced by agrees with what a reader sees.
+
 ## [1.2.0] - 2026-11-24
 
 This release changes what readers see, not how the action is set up. No action input or config key changed, so no workflow or `repo-pages.json` needs editing. A workflow on `@v1` gets it on its next rebuild. A workflow pinned to a commit gets it when the pin moves to the commit that the `v1.2.0` tag points to.

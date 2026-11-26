@@ -21,7 +21,7 @@ repo-pages has no server. Its risks lie in what the generator publishes and in w
 - **The action.** It refuses a repository that is private or has internal visibility when its GitHub Pages site is public or GitHub does not report the site's visibility, unless `allow-private-repository` is `true`. With `require-private-site` set to `true`, it refuses any site that is not private. It checks out without keeping credentials. Anything that gets around these is in scope.
 - **Markdown that runs code.** The viewer passes every rendered Markdown file through DOMPurify. A Markdown file that still runs script is in scope.
 - **Other file views.** CSV, JSON, YAML, code and image views treat a file's content as data. Any such file that runs script is in scope.
-- **Commit data.** Author names, commit subjects and file paths appear in the page. If one of them can run script, that is in scope.
+- **Commit data and references.** Author names, commit subjects, file paths, and the headings and excerpts that Referenced by shows appear in the page. If one of them can run script, that is in scope. So is a link to an unpublished file that makes its name appear in `_viewer/refs.json`.
 - **Browser storage.** The viewer validates everything it reads from browser storage. A stored value that breaks the page or runs script is in scope.
 
 ## What is by design
@@ -30,6 +30,7 @@ repo-pages has no server. Its risks lie in what the generator publishes and in w
 - **A shared domain is a shared origin.** Project sites under one custom domain share an origin. An unsandboxed HTML page on one site can read the browser storage of the others.
 - **Publishing is public by default.** A GitHub Pages site can be read by anyone unless your plan offers access control. The generator publishes what you track, including any secret you committed.
 - **Published sites name people.** A site shows commit author names and commit subjects. It does not publish author email addresses.
+- **Links between documents are public data.** `_viewer/refs.json` lists which published documents link to which published files, with a short excerpt around each link. It repeats text that is already on the site, and it never names a file that is not published.
 
 ## What is out of scope
 

@@ -29,7 +29,9 @@ Build the repo-pages site for GitHub Pages.
 Copies every published tracked file into the output folder at its own path,
 adds the viewer, and writes site-data.json with each file's size, last change
 and first add (from one `git log` pass), Markdown front matter, and a map of
-renamed paths. The viewer comes from --viewer, or from .github/site/ without it.
+renamed paths. It also writes _viewer/refs.json, which lists for each file the
+Markdown documents that link to it. The viewer comes from --viewer, or from
+.github/site/ without it.
 
 Uses only the Python standard library. Needs the full git history: in
 GitHub Actions, check out with fetch-depth: 0.
@@ -49,6 +51,7 @@ import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -236,6 +239,306 @@ def unquote(s: str) -> str:
     return s
 
 
+# ── Markdown scan ──
+#
+# One pass over a Markdown file finds its headings and its inline links and images,
+# skipping front matter, fenced code and code spans. Referenced by uses it now; search
+# and the agent index can reuse it. A browser check compares its links with the links
+# marked renders on the sample, so the two cannot drift apart unnoticed.
+
+FRONT_MATTER = re.compile(r"^---\r?\n[\s\S]*?\r?\n---\r?\n?")
+FENCE = re.compile(r"^\s*(`{3,}|~{3,})(.*)$")  # any indent: a fence in a list item is code too
+ATX = re.compile(r"^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$")
+LIST_ITEM = re.compile(r"^\s*(?:[-*+]|\d{1,9}[.)])\s+")
+TABLE_ROW = re.compile(r"^\s{0,3}\|")
+TABLE_RULE = re.compile(r"^\s*\|?\s*:?-{1,}:?\s*(?:\|\s*:?-{1,}:?\s*)*\|?\s*$")
+SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*:", re.I)
+SCAN_LINE_CHARS = 10_000  # a hostile file cannot stall the build with one huge line
+EXCERPT_CHARS = 160
+
+
+def code_spans(s: str) -> list[tuple[int, int]]:
+    """Ranges of inline code spans: a run of backticks closed by a run of the same length."""
+    return [m.span() for m in re.finditer(r"(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)", s, re.S)]
+
+
+def closing_bracket(s: str, i: int) -> int:
+    """Index of the ] that closes the [ at i, or -1."""
+    depth, j = 0, i
+    while j < len(s):
+        c = s[j]
+        if c == "\\":
+            j += 2
+            continue
+        if c == "[":
+            depth += 1
+        elif c == "]":
+            depth -= 1
+            if depth == 0:
+                return j
+        j += 1
+    return -1
+
+
+def link_destination(s: str, i: int) -> tuple[str, int] | None:
+    """Read `(dest "title")` starting at the ( at i. Returns the destination and the index after )."""
+    j = i + 1
+    while j < len(s) and s[j] in " \t":
+        j += 1
+    if j < len(s) and s[j] == "<":
+        end = s.find(">", j)
+        if end < 0 or "\n" in s[j:end]:
+            return None
+        dest, j = s[j + 1:end], end + 1
+    else:
+        start, depth = j, 0
+        while j < len(s) and not s[j].isspace():
+            c = s[j]
+            if c == "\\" and j + 1 < len(s):
+                j += 2
+                continue
+            if c == "(":
+                depth += 1
+            elif c == ")":
+                if depth == 0:
+                    break
+                depth -= 1
+            j += 1
+        dest = s[start:j]
+    while j < len(s) and s[j] in " \t":
+        j += 1
+    if j < len(s) and s[j] in "\"'(":
+        close = {"\"": "\"", "'": "'", "(": ")"}[s[j]]
+        end = s.find(close, j + 1)
+        if end < 0:
+            return None
+        j = end + 1
+        while j < len(s) and s[j] in " \t":
+            j += 1
+    if j >= len(s) or s[j] != ")":
+        return None
+    return re.sub(r"\\([!-/:-@\[-`{-~])", r"\1", dest), j + 1
+
+
+def inline_links(s: str) -> list[dict]:
+    """Inline links and images in one block, in order. An image inside a link label counts too."""
+    code = code_spans(s)
+    in_code = lambda i: any(a <= i < b for a, b in code)  # noqa: E731
+    found, i = [], 0
+    while True:
+        i = s.find("[", i)
+        if i < 0:
+            return found
+        if (i and s[i - 1] == "\\") or in_code(i):
+            i += 1
+            continue
+        end = closing_bracket(s, i)
+        if end < 0 or end + 1 >= len(s) or s[end + 1] != "(":
+            i += 1
+            continue
+        got = link_destination(s, end + 1)
+        if not got:
+            i += 1
+            continue
+        dest, after = got
+        image = i > 0 and s[i - 1] == "!" and not (i > 1 and s[i - 2] == "\\")
+        label = s[i + 1:end]
+        found.append({"start": i - 1 if image else i, "end": after, "label": label, "dest": dest, "image": image})
+        found.extend(dict(inner, start=inner["start"] + i + 1, end=inner["end"] + i + 1) for inner in inline_links(label))
+        i = after
+
+
+HTML_LINK = re.compile(r"<(a|img)\b[^>]*?\s(href|src)\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s\"'>]+))", re.I)
+
+
+def html_links(s: str) -> list[dict]:
+    """<a href> and <img src> written as HTML inside Markdown, as READMEs often do for images."""
+    code = code_spans(s)
+    found = []
+    for m in HTML_LINK.finditer(s):
+        tag, attr = m.group(1).lower(), m.group(2).lower()
+        if (tag == "a") != (attr == "href") or any(a <= m.start() < b for a, b in code):
+            continue
+        value = next(v for v in m.group(3, 4, 5) if v is not None)
+        found.append({"start": m.start(), "end": m.end(), "label": "", "dest": html.unescape(value), "image": tag == "img"})
+    return found
+
+
+def plain_text(s: str) -> str:
+    """Markdown syntax removed, for headings and excerpts. Link labels are kept."""
+    out, i = [], 0
+    for link in sorted((x for x in inline_links(s) if x["start"] >= i), key=lambda x: x["start"]):
+        if link["start"] < i:
+            continue
+        out.append(s[i:link["start"]])
+        out.append(plain_text(link["label"]))
+        i = link["end"]
+    out.append(s[i:])
+    text = "".join(out)
+    text = re.sub(r"<[^>\n]*>", "", text)
+    text = re.sub(r"(?<!\w)[*_~]+|[*_~]+(?!\w)", "", text)
+    text = text.replace("`", "")
+    text = re.sub(r"\\([!-/:-@\[-`{-~])", r"\1", text)
+    return " ".join(text.split())
+
+
+def scan_markdown(text: str) -> dict:
+    """Headings and inline links of a Markdown file.
+
+    headings: [{"level", "text", "line"}], in order.
+    links: [{"dest", "image", "heading", "block"}], where heading is the index of the
+    nearest heading above the link (-1 for none) and block is the raw text of the
+    paragraph, list item, table row or heading that holds it.
+    """
+    fm = FRONT_MATTER.match(text)
+    offset = text[:fm.end()].count("\n") if fm else 0
+    lines = text[fm.end():].splitlines() if fm else text.splitlines()
+    headings: list[dict] = []
+    links: list[dict] = []
+    block: list[str] = []
+    fence: str | None = None
+    mermaid = False
+
+    def flush() -> None:
+        if block:
+            raw = "\n".join(block)
+            found = sorted(inline_links(raw) + html_links(raw), key=lambda x: x["start"])
+            links.extend({"dest": x["dest"], "image": x["image"], "heading": len(headings) - 1, "block": raw, "start": x["start"]}
+                         for x in found)
+            block.clear()
+
+    for n, line in enumerate(lines, start=offset + 1):
+        line = line[:SCAN_LINE_CHARS]
+        if fence:
+            stripped = line.strip()
+            if stripped.startswith(fence[0] * len(fence)) and not stripped.strip(fence[0]):
+                fence = None
+            continue
+        f = FENCE.match(line)
+        if f and not (f.group(1)[0] == "`" and "`" in f.group(2)):
+            flush()
+            fence = f.group(1)
+            mermaid = mermaid or f.group(2).strip().lower().startswith("mermaid")
+            continue
+        if not line.strip():
+            flush()
+            continue
+        h = ATX.match(line)
+        if h:
+            flush()
+            headings.append({"level": len(h.group(1)), "text": plain_text(h.group(2) or ""), "line": n})
+            block.append(h.group(2) or "")
+            flush()
+            continue
+        if TABLE_ROW.match(line):
+            flush()
+            if not TABLE_RULE.match(line):
+                block.append(line)
+                flush()
+            continue
+        if LIST_ITEM.match(line):
+            flush()
+        block.append(line)
+    flush()
+    return {"headings": headings, "links": links, "mermaid": mermaid}
+
+
+def excerpt(block: str, start: int) -> str:
+    """About EXCERPT_CHARS of plain text from the block, centered on the link that starts at start."""
+    mark = "\x01"
+    raw = block[:start] + mark + block[start:]
+    if TABLE_ROW.match(raw):
+        raw = " | ".join(c.strip() for c in raw.strip().strip("|").split("|"))
+    raw = LIST_ITEM.sub("", raw, count=1)
+    raw = re.sub(r"^\s{0,3}>\s?", "", raw, flags=re.M)
+    text = plain_text(raw)
+    at = max(text.find(mark), 0)
+    text = text.replace(mark, "")
+    if len(text) <= EXCERPT_CHARS:
+        return text.strip()
+    lo = max(0, min(at - EXCERPT_CHARS // 2, len(text) - EXCERPT_CHARS))
+    hi = lo + EXCERPT_CHARS
+    if lo:
+        lo = text.find(" ", lo) + 1 or lo
+    if hi < len(text):
+        hi = text.rfind(" ", lo, hi) if text.rfind(" ", lo, hi) > lo else hi
+    return ("… " if lo else "") + text[lo:hi].strip() + (" …" if hi < len(text) else "")
+
+
+def resolve_rel(base: str, href: str) -> str:
+    """The viewer's resolveRel: join href to the folder base, following . and .."""
+    parts = [] if href.startswith("/") else (base.split("/") if base else [])
+    for seg in href.split("/"):
+        if seg == "..":
+            if parts:
+                parts.pop()
+        elif seg and seg != ".":
+            parts.append(seg)
+    return "/".join(parts)
+
+
+def link_target(base: str, dest: str, renames: dict) -> tuple[str, str] | None:
+    """Where a relative link in a document opens, with the viewer's rewriteLink rules.
+
+    Returns (path, fragment), or None for an outside link or a bare #anchor.
+    """
+    if SCHEME.match(dest) or dest.startswith("//"):
+        return None
+    path, _, frag = dest.partition("#")
+    if not path:
+        return None
+    try:
+        frag = urllib.parse.unquote(frag, errors="strict")
+    except UnicodeDecodeError:
+        pass
+    try:
+        target = resolve_rel(base, urllib.parse.unquote(path.split("?")[0], errors="strict"))
+    except UnicodeDecodeError:
+        target = resolve_rel(base, path)
+    return renames.get(target, target), frag
+
+
+# ── Referenced by ──
+
+REFS_FILE = f"{VIEWER_DIR}/refs.json"
+REFS_MENTIONS = 3  # per referring file
+REFS_PER_TARGET = 25  # referring files listed per file; the rest are counted
+
+
+def collect_refs(repo: Path, files: list[str], renames: dict) -> dict:
+    """For each published file, the published Markdown files that link to it.
+
+    Links to unpublished files are never recorded, so an excluded name cannot leak.
+    """
+    published = set(files)
+    found: dict[str, dict[str, list[dict]]] = {}
+    for src in files:
+        if not src.lower().endswith((".md", ".markdown")):
+            continue
+        scan = scan_markdown((repo / src).read_text(encoding="utf-8", errors="replace"))
+        base = src.rsplit("/", 1)[0] if "/" in src else ""
+        seen: set[tuple[str, str]] = set()
+        for link in scan["links"]:
+            got = link_target(base, link["dest"], renames)
+            if not got or got[0] == src or got[0] not in published:
+                continue
+            target, frag = got
+            if (target, link["block"]) in seen:
+                continue  # one mention per block, however often the block links the file
+            seen.add((target, link["block"]))
+            mentions = found.setdefault(target, {}).setdefault(src, [])
+            if len(mentions) < REFS_MENTIONS:
+                heading = scan["headings"][link["heading"]]["text"] if link["heading"] >= 0 else ""
+                mentions.append({"h": heading, "x": excerpt(link["block"], link["start"]), "a": frag, "k": "i" if link["image"] else "l"})
+    refs, more = {}, {}
+    for target in sorted(found):
+        sources = sorted(found[target])
+        refs[target] = [[s, found[target][s]] for s in sources[:REFS_PER_TARGET]]
+        if len(sources) > REFS_PER_TARGET:
+            more[target] = len(sources) - REFS_PER_TARGET
+    return {"version": 1, "refs": refs, "more": more}
+
+
 # ── Config ──
 
 
@@ -356,6 +659,11 @@ def build(repo: Path, out: Path, viewer: Path | None = None) -> dict:
         "files": file_rows,
         "renames": {old: new for old, new in sorted(renames.items()) if new in set(files)},
     }
+    # Generated side files, listed so the viewer fetches only what this build wrote.
+    refs = collect_refs(repo, files, data["renames"])
+    outputs = {"refs": REFS_FILE} if refs["refs"] else {}
+    if outputs:
+        data["outputs"] = outputs
 
     if out.exists():
         shutil.rmtree(out)
@@ -368,6 +676,9 @@ def build(repo: Path, out: Path, viewer: Path | None = None) -> dict:
     vendor = viewer / "vendor"
     if vendor.is_dir():
         shutil.copytree(vendor, out / VIEWER_DIR / "vendor")
+    if "refs" in outputs:
+        (out / VIEWER_DIR).mkdir(exist_ok=True)
+        (out / REFS_FILE).write_text(json.dumps(refs, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     (out / DATA_FILE).write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     return data
 

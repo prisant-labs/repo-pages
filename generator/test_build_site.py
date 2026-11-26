@@ -546,5 +546,123 @@ class RepositoryTests(unittest.TestCase):
         self.assertTrue((vendor / f"purify-{watch['dompurify']}.min.js").exists())
 
 
+class MarkdownScanTests(unittest.TestCase):
+    def dests(self, text):
+        return [x["dest"] for x in module.scan_markdown(text)["links"]]
+
+    def test_links_and_images(self):
+        text = "See [the form](forms/a.pdf \"title\") and ![chart](../img/c.png).\n"
+        self.assertEqual(self.dests(text), ["forms/a.pdf", "../img/c.png"])
+        self.assertEqual([x["image"] for x in module.scan_markdown(text)["links"]], [False, True])
+
+    def test_angle_brackets_parentheses_and_escapes(self):
+        self.assertEqual(self.dests("[a](<my file.md>) [b](notes_(old).md) [c](x\\_y.md) \\[d](no.md)"),
+                         ["my file.md", "notes_(old).md", "x_y.md"])
+
+    def test_html_links_and_images(self):
+        text = '<a href="docs/a.md"><img src=\'shot.png\' alt="x"></a> <img alt="y" src=b&amp;c.png> `<img src="code.png">` <a name="n">\n'
+        self.assertEqual(self.dests(text), ["docs/a.md", "shot.png", "b&c.png"])
+
+    def test_image_inside_a_link_counts_twice(self):
+        self.assertEqual(self.dests("[![badge](b.svg)](docs/a.md)"), ["docs/a.md", "b.svg"])
+
+    def test_code_and_front_matter_are_skipped(self):
+        text = ("---\nlink: [x](front.md)\n---\n"
+                "```\n[a](fenced.md)\n```\n"
+                "~~~~ md\n[b](tilde.md)\n~~~~\n"
+                "  ```\n  [c](indented-fence.md)\n  ```\n"
+                "Use `[d](span.md)` or ``[e](double.md)`` but [f](real.md).\n")
+        self.assertEqual(self.dests(text), ["real.md"])
+
+    def test_headings_and_their_links(self):
+        scan = module.scan_markdown("# Top\n\n[a](a.md)\n\n## The **cover** `sheet` [form](f.pdf) ##\n\n[b](b.md)\n")
+        self.assertEqual([h["text"] for h in scan["headings"]], ["Top", "The cover sheet form"])
+        self.assertEqual([(x["dest"], x["heading"]) for x in scan["links"]], [("a.md", 0), ("f.pdf", 1), ("b.md", 1)])
+
+    def test_blocks_end_at_list_items_and_table_rows(self):
+        scan = module.scan_markdown("Intro [a](a.md)\n- one [b](b.md)\n- two\n| x | [c](c.md) |\n|---|---|\n| y | z |\n")
+        self.assertEqual([x["block"] for x in scan["links"]], ["Intro [a](a.md)", "- one [b](b.md)", "| x | [c](c.md) |"])
+
+    def test_mermaid_fence_is_noticed(self):
+        self.assertTrue(module.scan_markdown("```mermaid\ngraph TD\n```\n")["mermaid"])
+        self.assertFalse(module.scan_markdown("```js\nx\n```\n")["mermaid"])
+
+    def test_excerpt_is_plain_text_centered_on_the_link(self):
+        self.assertEqual(module.excerpt("| [Form](f.pdf) | **PDF** | The top |", 2), "Form | PDF | The top")
+        self.assertEqual(module.excerpt("- See the *memo* and <b>[the form](f.pdf)</b>.", 22), "See the memo and the form.")
+        long = " ".join(f"word{i}" for i in range(80)) + " [target](t.md) " + " ".join(f"tail{i}" for i in range(80))
+        x = module.excerpt(long, long.index("[target]"))
+        self.assertIn("target", x)
+        self.assertTrue(x.startswith("… ") and x.endswith(" …"))
+        self.assertLessEqual(len(x), module.EXCERPT_CHARS + 4)
+
+    def test_link_target_follows_the_viewer_rules(self):
+        renames = {"docs/old.md": "docs/new.md"}
+        self.assertEqual(module.link_target("docs", "../a%20b.md?raw=1#Part%20two", renames), ("a b.md", "Part two"))
+        self.assertEqual(module.link_target("docs", "./old.md", renames), ("docs/new.md", ""))
+        self.assertEqual(module.link_target("docs/x", "/top.md", renames), ("top.md", ""))
+        for outside in ("https://example.com/a.md", "mailto:a@example.com", "//host/a.md", "#local"):
+            self.assertIsNone(module.link_target("docs", outside, renames))
+
+    def test_a_huge_line_does_not_stall(self):
+        scan = module.scan_markdown("[" * 200_000 + "](x.md)\n" + "[ok](ok.md)\n")
+        self.assertIn("ok.md", [x["dest"] for x in scan["links"]])
+
+
+class RefsTests(BuildTests):
+    def refs(self):
+        data, out = self.build()
+        path = out / "_viewer/refs.json"
+        return data, (json.loads(path.read_text(encoding="utf-8")) if path.exists() else None)
+
+    def test_references_are_collected_and_listed(self):
+        self.write("docs/guide.md", "# Guide\n\n## Data\n\nThe numbers are in [the ledger](../data/ledger.csv). Again: [ledger](../data/ledger.csv).\n\n![chart](chart.png)\n")
+        self.write("data/ledger.csv", "a,b\n1,2\n")
+        self.write("docs/chart.png", "png")
+        self.write("README.md", "Start with the [guide](docs/guide.md#data) and [itself](README.md).\n")
+        commit(self.repo, "Add", "Ann", "2026-01-01T10:00:00Z")
+        data, refs = self.refs()
+        self.assertEqual(data["outputs"], {"refs": "_viewer/refs.json"})
+        self.assertEqual(sorted(refs["refs"]), ["data/ledger.csv", "docs/chart.png", "docs/guide.md"])
+        [[src, mentions]] = refs["refs"]["data/ledger.csv"]
+        self.assertEqual(src, "docs/guide.md")
+        self.assertEqual(mentions, [{"h": "Data", "x": "The numbers are in the ledger. Again: ledger.", "a": "", "k": "l"}])  # one per block
+        self.assertEqual(refs["refs"]["docs/chart.png"][0][1][0]["k"], "i")
+        self.assertEqual(refs["refs"]["docs/guide.md"][0][1][0]["a"], "data")
+        self.assertNotIn("README.md", refs["refs"])  # a self link is not a reference
+
+    def test_unpublished_files_never_appear(self):
+        self.write("a.md", "[secret](skip/secret.md) [hidden](.notes/n.md) [gone](missing.md) [folder](docs/)\n")
+        self.write("skip/secret.md", "[back](../b.md)\n")
+        self.write(".notes/n.md", "x")
+        self.write("docs/b.md", "x")
+        self.write("b.md", "x")
+        commit(self.repo, "Add", "Ann", "2026-01-01T10:00:00Z")
+        data, refs = self.refs()
+        self.assertIsNone(refs)
+        self.assertNotIn("outputs", data)
+
+    def test_links_follow_renames(self):
+        self.write("docs/old.md", "x")
+        self.write("index.md", "[doc](docs/old.md)\n")
+        commit(self.repo, "Add", "Ann", "2026-01-01T10:00:00Z")
+        run(self.repo, "mv", "docs/old.md", "docs/new.md")
+        commit(self.repo, "Rename", "Ann", "2026-01-02T10:00:00Z")
+        _, refs = self.refs()
+        self.assertEqual(list(refs["refs"]), ["docs/new.md"])
+
+    def test_caps(self):
+        self.write("t.md", "target")
+        for i in range(module.REFS_PER_TARGET + 3):
+            self.write(f"src/{i:02}.md", "\n\n".join(f"Para {n}: [t](../t.md)" for n in range(module.REFS_MENTIONS + 2)))
+        commit(self.repo, "Add", "Ann", "2026-01-01T10:00:00Z")
+        _, refs = self.refs()
+        listed = refs["refs"]["t.md"]
+        self.assertEqual(len(listed), module.REFS_PER_TARGET)
+        self.assertEqual(refs["more"], {"t.md": 3})
+        self.assertTrue(all(len(m) == module.REFS_MENTIONS for _, m in listed))
+        self.assertEqual([s for s, _ in listed], sorted(s for s, _ in listed))
+
+
 if __name__ == "__main__":
     unittest.main()

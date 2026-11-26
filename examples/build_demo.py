@@ -82,9 +82,11 @@ EMBED_JS = """window.RP_EMBED = (() => {
     made.set(p, u);
     return u;
   }
+  // The data file and every generated side file it lists under "outputs", such as _viewer/refs.json.
+  const GENERATED = { "site-data.json": DATA, ...__GENERATED__ };
   const realFetch = window.fetch.bind(window);
-  window.fetch = (input, init) => input === "site-data.json"
-    ? Promise.resolve(new Response(JSON.stringify(DATA), { headers: { "Content-Type": "application/json" } }))
+  window.fetch = (input, init) => typeof input === "string" && Object.hasOwn(GENERATED, input)
+    ? Promise.resolve(new Response(JSON.stringify(GENERATED[input]), { headers: { "Content-Type": "application/json" } }))
     : realFetch(input, init);
   return { url, enc };
 })();"""
@@ -211,7 +213,10 @@ def bundle(site: Path, out: Path) -> tuple[int, int]:
 
     vendor = sorted((site / "_viewer" / "vendor").glob("*.js"))
     inject = "".join(script_tag(v.read_text(encoding="utf-8")) for v in vendor)
-    inject += script_tag(EMBED_JS.replace("__DATA__", js_literal(data)).replace("__FILES__", js_literal(files)))
+    generated = {p: json.loads((site / p).read_text(encoding="utf-8")) for p in data.get("outputs", {}).values()}
+    # File contents go in last, so no later replacement can touch text inside a file.
+    embed = EMBED_JS.replace("__GENERATED__", js_literal(generated)).replace("__DATA__", js_literal(data))
+    inject += script_tag(embed.replace("__FILES__", js_literal(files)))
     html = html.replace(MAIN_SCRIPT, inject + MAIN_SCRIPT)
     # Pre-launch, like the projects hub. Remove the robots tag when the project is announced.
     html = html.replace("<title>Repo Pages</title>", f'<meta name="robots" content="noindex" />\n<title>{SITE_CONFIG["title"]} (demo)</title>', 1)

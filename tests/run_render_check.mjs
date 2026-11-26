@@ -67,6 +67,21 @@ try {
   if (seen.plain) problems.push("the document fell back to plain text (.md-plain)");
   if (!seen.heading) problems.push("no rendered heading in .md-body");
   console.log(`${base}${route} ${JSON.stringify({ ...seen, loaded })}`);
+
+  // The demo serves generated side files from the page, so only an ordinary site proves
+  // that each file listed under "outputs" in site-data.json loads by URL.
+  const data = JSON.parse(await readFile(join(resolve(target), "site-data.json"), "utf-8"));
+  const refsPath = data.outputs && data.outputs.refs;
+  if (refsPath) {
+    const refs = JSON.parse(await readFile(join(resolve(target), refsPath), "utf-8"));
+    const [file, list] = Object.entries(refs.refs)[0];
+    const status = await page.evaluate(async p => (await fetch(p)).status, refsPath);
+    if (status !== 200) problems.push(`${refsPath} returned ${status}`);
+    await page.goto(base + "#/p/" + file);
+    const label = await page.waitForSelector("#refsBtn", { timeout: 10000 }).then(b => b.textContent(), () => "");
+    if (!label.trim().endsWith(String(list.length + ((refs.more || {})[file] || 0)))) problems.push(`no Referenced by button with the right count on ${file} (got "${label.trim()}")`);
+    console.log(`${base}#/p/${file} refs ${JSON.stringify({ status, label: label.trim() })}`);
+  }
 } catch (e) {
   problems.push(e.message);
 } finally {
