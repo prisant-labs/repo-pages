@@ -590,6 +590,7 @@ class MarkdownScanTests(unittest.TestCase):
     def test_excerpt_is_plain_text_centered_on_the_link(self):
         self.assertEqual(module.excerpt("| [Form](f.pdf) | **PDF** | The top |", 2), "Form | PDF | The top")
         self.assertEqual(module.excerpt("- See the *memo* and <b>[the form](f.pdf)</b>.", 22), "See the memo and the form.")
+        self.assertEqual(module.excerpt('<a href="x"><img src="s.png" alt="The viewer &amp; a tree"></a>', 12), "The viewer & a tree")
         long = " ".join(f"word{i}" for i in range(80)) + " [target](t.md) " + " ".join(f"tail{i}" for i in range(80))
         x = module.excerpt(long, long.index("[target]"))
         self.assertIn("target", x)
@@ -604,9 +605,27 @@ class MarkdownScanTests(unittest.TestCase):
         for outside in ("https://example.com/a.md", "mailto:a@example.com", "//host/a.md", "#local"):
             self.assertIsNone(module.link_target("docs", outside, renames))
 
-    def test_a_huge_line_does_not_stall(self):
-        scan = module.scan_markdown("[" * 200_000 + "](x.md)\n" + "[ok](ok.md)\n")
-        self.assertIn("ok.md", [x["dest"] for x in scan["links"]])
+    def test_hostile_text_does_not_stall(self):
+        import time
+        cases = {
+            "one huge line": "[" * 200_000 + "](x.md)\n",
+            "a paragraph of brackets": ("[" * 9_000 + "\n") * 10,
+            "unclosed tags": ("<a " * 3_000 + "\n") * 10,
+            "unmatched backticks": ("` " * 4_000 + "\n") * 10,
+            "unclosed angle brackets": ("<" * 9_000 + "\n") * 10,
+            "deep nesting": "[" * 5_000 + "x" + "](y.md)" * 5_000 + "\n",
+            "destinations that never close": "[a](" * 4_000 + "\n",
+        }
+        for name, text in cases.items():
+            started = time.perf_counter()
+            scan = module.scan_markdown(text + "\n[ok](ok.md)\n")
+            self.assertIn("ok.md", [x["dest"] for x in scan["links"]], name)
+            self.assertLess(time.perf_counter() - started, 2, name)
+        many = " ".join(f"[f{i}](f{i}.md)" for i in range(3_000))
+        started = time.perf_counter()
+        for link in module.scan_markdown(many)["links"]:
+            module.excerpt(link["block"], link["start"])
+        self.assertLess(time.perf_counter() - started, 4, "excerpts of a block with many links")
 
 
 class RefsTests(BuildTests):

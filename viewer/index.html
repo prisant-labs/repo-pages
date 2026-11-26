@@ -30,7 +30,7 @@
   SOFTWARE.
 -->
 <!--
-  The outline folder icons use shapes from Lucide (https://lucide.dev).
+  The outline folder icons and the link icon on the Referenced by button use shapes from Lucide (https://lucide.dev).
 
   ISC License
 
@@ -1194,7 +1194,8 @@ function fillRefs(f) {
     const slot = $("#refsSlot"), entry = map.get(f.path);
     if (!slot || !state.route || state.route.path !== f.path || !entry) return;
     const n = entry.rows.length + entry.more;
-    slot.innerHTML = `<button class="src-link" id="refsBtn" aria-haspopup="dialog" aria-expanded="false" title="Documents on this site that link to this file">${ICON_LINK}<span class="hide-sm">Referenced by</span> ${n}</button>`;
+    // On a phone only the count shows, so the accessible name carries the words.
+    slot.innerHTML = `<button class="src-link" id="refsBtn" aria-expanded="false" aria-label="Referenced by ${n} ${n === 1 ? "file" : "files"}" title="Documents on this site that link to this file">${ICON_LINK}<span class="hide-sm">Referenced by</span> ${n}</button>`;
     $("#refsBtn").onclick = e => { e.stopPropagation(); showRefs(entry, e.currentTarget); };
   });
 }

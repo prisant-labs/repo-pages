@@ -239,10 +239,11 @@ window.rpChecks = async function rpChecks() {
     if (!refs || !refs.size) skip("referenced by: this site has no refs.json");
     else {
       await loadMarkdownLibs();
-      const rendered = new Set(), scheme = /^[a-z][a-z0-9+.-]*:/i;
+      const rendered = new Set(), headingIds = {}, scheme = /^[a-z][a-z0-9+.-]*:/i;
       for (const f of FILES.filter(f => f.ext === "md" || f.ext === "markdown")) {
         const div = document.createElement("div");
         div.innerHTML = DOMPurify.sanitize(marked.parse(stripFrontMatter(await fetchText(f)), { gfm: true }));
+        headingIds[f.path] = new Set([...div.querySelectorAll("h1, h2, h3, h4, h5, h6")].map(h => "h-" + (slugify(h.textContent) || "section")));
         const dests = [...div.querySelectorAll("a[href]")].map(a => a.getAttribute("href")).concat([...div.querySelectorAll("img[src]")].map(i => i.getAttribute("src")));
         for (const d of dests) {
           if (scheme.test(d) || d.startsWith("//")) continue;
@@ -255,6 +256,9 @@ window.rpChecks = async function rpChecks() {
       const capped = new Set([...refs].filter(([, e]) => e.more).map(([t]) => t));
       const missing = [...rendered].filter(p => !listed.has(p) && !capped.has(p.split(" -> ")[1])), extra = [...listed].filter(p => !rendered.has(p));
       check("referenced by matches rendered links", !missing.length && !extra.length, [...missing.map(p => "missing " + p), ...extra.map(p => "extra " + p)].slice(0, 3).join("; "));
+      // Each entry opens its section: the stored heading must slug to a heading id in the rendered file.
+      const lost = [...refs.values()].flatMap(e => e.rows.flatMap(r => r.mentions.filter(m => m.h && !headingIds[r.src].has("h-" + slugify(m.h))).map(m => `${r.src} "${m.h}"`)));
+      check("referenced by headings land on a section", !lost.length, lost.slice(0, 3).join("; "));
 
       const untouched = parseRefs({ refs: { [FILES[0].path]: [["javascript:alert(1)", [{ h: "", x: "", a: "", k: "l" }]], [FILES[1].path, "bad"]] }, more: [] });
       check("forged refs are dropped", untouched.size === 0 && parseRefs(null).size === 0 && parseRefs({ refs: [] }).size === 0);

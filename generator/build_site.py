@@ -44,6 +44,7 @@ Local usage, from the repository you want to publish:
 from __future__ import annotations
 
 import argparse
+import bisect
 import html
 import json
 import os
@@ -254,47 +255,56 @@ TABLE_ROW = re.compile(r"^\s{0,3}\|")
 TABLE_RULE = re.compile(r"^\s*\|?\s*:?-{1,}:?\s*(?:\|\s*:?-{1,}:?\s*)*\|?\s*$")
 SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*:", re.I)
 SCAN_LINE_CHARS = 10_000  # a hostile file cannot stall the build with one huge line
+SCAN_BLOCK_CHARS = 20_000  # nor with a paragraph of many long lines
+DEST_CHARS = 2_000  # a link destination or title longer than this is not read
 EXCERPT_CHARS = 160
 
 
 def code_spans(s: str) -> list[tuple[int, int]]:
     """Ranges of inline code spans: a run of backticks closed by a run of the same length."""
-    return [m.span() for m in re.finditer(r"(?<!`)(`+)(?!`).*?(?<!`)\1(?!`)", s, re.S)]
+    return [m.span() for m in re.finditer(r"(?<!`)(`+)(?!`).{0,2000}?(?<!`)\1(?!`)", s, re.S)]
 
 
-def closing_bracket(s: str, i: int) -> int:
-    """Index of the ] that closes the [ at i, or -1."""
-    depth, j = 0, i
+def in_spans(spans: list[tuple[int, int]], i: int) -> bool:
+    """Whether i falls inside one of the sorted, non-overlapping spans."""
+    k = bisect.bisect_right(spans, (i, float("inf"))) - 1
+    return k >= 0 and spans[k][0] <= i < spans[k][1]
+
+
+def bracket_pairs(s: str) -> dict[int, int]:
+    """For each [ that is closed, the index of its ]. One pass, so hostile text stays linear."""
+    stack: list[int] = []
+    pairs: dict[int, int] = {}
+    j = 0
     while j < len(s):
         c = s[j]
         if c == "\\":
             j += 2
             continue
         if c == "[":
-            depth += 1
-        elif c == "]":
-            depth -= 1
-            if depth == 0:
-                return j
+            stack.append(j)
+        elif c == "]" and stack:
+            pairs[stack.pop()] = j
         j += 1
-    return -1
+    return pairs
 
 
 def link_destination(s: str, i: int) -> tuple[str, int] | None:
     """Read `(dest "title")` starting at the ( at i. Returns the destination and the index after )."""
+    limit = min(len(s), i + DEST_CHARS)
     j = i + 1
-    while j < len(s) and s[j] in " \t":
+    while j < limit and s[j] in " \t":
         j += 1
-    if j < len(s) and s[j] == "<":
-        end = s.find(">", j)
+    if j < limit and s[j] == "<":
+        end = s.find(">", j, limit)
         if end < 0 or "\n" in s[j:end]:
             return None
         dest, j = s[j + 1:end], end + 1
     else:
         start, depth = j, 0
-        while j < len(s) and not s[j].isspace():
+        while j < limit and not s[j].isspace():
             c = s[j]
-            if c == "\\" and j + 1 < len(s):
+            if c == "\\" and j + 1 < limit:
                 j += 2
                 continue
             if c == "(":
@@ -305,35 +315,36 @@ def link_destination(s: str, i: int) -> tuple[str, int] | None:
                 depth -= 1
             j += 1
         dest = s[start:j]
-    while j < len(s) and s[j] in " \t":
+    while j < limit and s[j] in " \t":
         j += 1
-    if j < len(s) and s[j] in "\"'(":
+    if j < limit and s[j] in "\"'(":
         close = {"\"": "\"", "'": "'", "(": ")"}[s[j]]
-        end = s.find(close, j + 1)
+        end = s.find(close, j + 1, limit)
         if end < 0:
             return None
         j = end + 1
-        while j < len(s) and s[j] in " \t":
+        while j < limit and s[j] in " \t":
             j += 1
-    if j >= len(s) or s[j] != ")":
+    if j >= limit or s[j] != ")":
         return None
     return re.sub(r"\\([!-/:-@\[-`{-~])", r"\1", dest), j + 1
 
 
-def inline_links(s: str) -> list[dict]:
-    """Inline links and images in one block, in order. An image inside a link label counts too."""
+def inline_links(s: str, nested: bool = True) -> list[dict]:
+    """Inline links and images in one block, in order.
+
+    An image inside a link label, the usual badge pattern, counts too. Only one level is
+    read, so deeply nested brackets cannot exhaust the stack.
+    """
     code = code_spans(s)
-    in_code = lambda i: any(a <= i < b for a, b in code)  # noqa: E731
+    pairs = bracket_pairs(s)
     found, i = [], 0
     while True:
         i = s.find("[", i)
         if i < 0:
             return found
-        if (i and s[i - 1] == "\\") or in_code(i):
-            i += 1
-            continue
-        end = closing_bracket(s, i)
-        if end < 0 or end + 1 >= len(s) or s[end + 1] != "(":
+        end = pairs.get(i, -1)
+        if (i and s[i - 1] == "\\") or in_spans(code, i) or end < 0 or end + 1 >= len(s) or s[end + 1] != "(":
             i += 1
             continue
         got = link_destination(s, end + 1)
@@ -344,11 +355,13 @@ def inline_links(s: str) -> list[dict]:
         image = i > 0 and s[i - 1] == "!" and not (i > 1 and s[i - 2] == "\\")
         label = s[i + 1:end]
         found.append({"start": i - 1 if image else i, "end": after, "label": label, "dest": dest, "image": image})
-        found.extend(dict(inner, start=inner["start"] + i + 1, end=inner["end"] + i + 1) for inner in inline_links(label))
+        if nested:
+            found.extend(dict(inner, start=inner["start"] + i + 1, end=inner["end"] + i + 1) for inner in inline_links(label, False))
         i = after
 
 
-HTML_LINK = re.compile(r"<(a|img)\b[^>]*?\s(href|src)\s*=\s*(?:\"([^\"]*)\"|'([^']*)'|([^\s\"'>]+))", re.I)
+HTML_LINK = re.compile(r"<(a|img)\b[^>]{0,500}?\s(href|src)\s*=\s*(?:\"([^\"]{0,2000})\"|'([^']{0,2000})'|([^\s\"'>]{1,2000}))", re.I)
+HTML_ALT = re.compile(r"\salt\s*=\s*(?:\"([^\"]{0,500})\"|'([^']{0,500})')", re.I)
 
 
 def html_links(s: str) -> list[dict]:
@@ -357,25 +370,32 @@ def html_links(s: str) -> list[dict]:
     found = []
     for m in HTML_LINK.finditer(s):
         tag, attr = m.group(1).lower(), m.group(2).lower()
-        if (tag == "a") != (attr == "href") or any(a <= m.start() < b for a, b in code):
+        if (tag == "a") != (attr == "href") or in_spans(code, m.start()):
             continue
         value = next(v for v in m.group(3, 4, 5) if v is not None)
         found.append({"start": m.start(), "end": m.end(), "label": "", "dest": html.unescape(value), "image": tag == "img"})
     return found
 
 
-def plain_text(s: str) -> str:
-    """Markdown syntax removed, for headings and excerpts. Link labels are kept."""
+def img_alt(m: re.Match) -> str:
+    """An HTML image tag as its alt text, so an excerpt around a screenshot is not empty."""
+    alt = HTML_ALT.search(m.group(0))
+    return f" {html.unescape(alt.group(1) or alt.group(2) or '')} " if alt else ""
+
+
+def plain_text(s: str, nested: bool = True) -> str:
+    """Markdown syntax removed, for headings and excerpts. Link labels and image alt text are kept."""
     out, i = [], 0
-    for link in sorted((x for x in inline_links(s) if x["start"] >= i), key=lambda x: x["start"]):
+    for link in inline_links(s, False):
         if link["start"] < i:
             continue
         out.append(s[i:link["start"]])
-        out.append(plain_text(link["label"]))
+        out.append(plain_text(link["label"], False) if nested else link["label"])
         i = link["end"]
     out.append(s[i:])
     text = "".join(out)
-    text = re.sub(r"<[^>\n]*>", "", text)
+    text = re.sub(r"<img\b[^>]{0,500}>", img_alt, text, flags=re.I)
+    text = re.sub(r"<[^>\n]{0,500}>", "", text)
     text = re.sub(r"(?<!\w)[*_~]+|[*_~]+(?!\w)", "", text)
     text = text.replace("`", "")
     text = re.sub(r"\\([!-/:-@\[-`{-~])", r"\1", text)
@@ -401,7 +421,7 @@ def scan_markdown(text: str) -> dict:
 
     def flush() -> None:
         if block:
-            raw = "\n".join(block)
+            raw = "\n".join(block)[:SCAN_BLOCK_CHARS]
             found = sorted(inline_links(raw) + html_links(raw), key=lambda x: x["start"])
             links.extend({"dest": x["dest"], "image": x["image"], "heading": len(headings) - 1, "block": raw, "start": x["start"]}
                          for x in found)
@@ -446,7 +466,8 @@ def scan_markdown(text: str) -> dict:
 def excerpt(block: str, start: int) -> str:
     """About EXCERPT_CHARS of plain text from the block, centered on the link that starts at start."""
     mark = "\x01"
-    raw = block[:start] + mark + block[start:]
+    lo = max(0, start - 1000)  # only the text near the link, however long the block
+    raw = block[lo:start] + mark + block[start:start + 1000]
     if TABLE_ROW.match(raw):
         raw = " | ".join(c.strip() for c in raw.strip().strip("|").split("|"))
     raw = LIST_ITEM.sub("", raw, count=1)
