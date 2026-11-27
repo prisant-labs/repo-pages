@@ -406,9 +406,10 @@ def scan_markdown(text: str) -> dict:
     """Headings and inline links of a Markdown file.
 
     headings: [{"level", "text", "line"}], in order.
-    links: [{"dest", "image", "heading", "block"}], where heading is the index of the
-    nearest heading above the link (-1 for none) and block is the raw text of the
-    paragraph, list item, table row or heading that holds it.
+    links: [{"dest", "image", "heading", "block", "start", "line"}], where heading is the
+    index of the nearest heading above the link (-1 for none), block is the raw text of
+    the paragraph, list item, table row or heading that holds it, start is the link's
+    offset in block, and line is the file line it sits on.
     """
     fm = FRONT_MATTER.match(text)
     offset = text[:fm.end()].count("\n") if fm else 0
@@ -416,6 +417,7 @@ def scan_markdown(text: str) -> dict:
     headings: list[dict] = []
     links: list[dict] = []
     block: list[str] = []
+    block_line = 0
     fence: str | None = None
     mermaid = False
 
@@ -423,9 +425,17 @@ def scan_markdown(text: str) -> dict:
         if block:
             raw = "\n".join(block)[:SCAN_BLOCK_CHARS]
             found = sorted(inline_links(raw) + html_links(raw), key=lambda x: x["start"])
-            links.extend({"dest": x["dest"], "image": x["image"], "heading": len(headings) - 1, "block": raw, "start": x["start"]}
+            breaks = [i for i, c in enumerate(raw) if c == "\n"] if found else []
+            links.extend({"dest": x["dest"], "image": x["image"], "heading": len(headings) - 1, "block": raw,
+                          "start": x["start"], "line": block_line + bisect.bisect_left(breaks, x["start"])}
                          for x in found)
             block.clear()
+
+    def add(text: str, n: int) -> None:
+        nonlocal block_line
+        if not block:
+            block_line = n
+        block.append(text)
 
     for n, line in enumerate(lines, start=offset + 1):
         line = line[:SCAN_LINE_CHARS]
@@ -447,18 +457,18 @@ def scan_markdown(text: str) -> dict:
         if h:
             flush()
             headings.append({"level": len(h.group(1)), "text": plain_text(h.group(2) or ""), "line": n})
-            block.append(h.group(2) or "")
+            add(h.group(2) or "", n)
             flush()
             continue
         if TABLE_ROW.match(line):
             flush()
             if not TABLE_RULE.match(line):
-                block.append(line)
+                add(line, n)
                 flush()
             continue
         if LIST_ITEM.match(line):
             flush()
-        block.append(line)
+        add(line, n)
     flush()
     return {"headings": headings, "links": links, "mermaid": mermaid}
 
@@ -526,13 +536,29 @@ REFS_MENTIONS = 3  # per referring file
 REFS_PER_TARGET = 25  # referring files listed per file; the rest are counted
 
 
-def collect_refs(repo: Path, files: list[str], renames: dict) -> dict:
-    """For each published file, the published Markdown files that link to it.
+def folders_of(paths) -> set[str]:
+    """Every folder that holds one of paths, at any depth."""
+    out: set[str] = set()
+    for p in paths:
+        parts = p.split("/")[:-1]
+        for i in range(1, len(parts) + 1):
+            out.add("/".join(parts[:i]))
+    return out
 
-    Links to unpublished files are never recorded, so an excluded name cannot leak.
+
+def collect_refs(repo: Path, files: list[str], renames: dict, tracked: list[str] | None = None) -> tuple[dict, list[dict]]:
+    """For each published file, the published Markdown files that link to it, and the broken links.
+
+    Links to unpublished files are never recorded in refs, so an excluded name cannot leak.
+    The broken links are for the run summary only and never go into the site.
     """
     published = set(files)
+    published_dirs = folders_of(files)
+    in_repo = set(tracked if tracked is not None else files)
+    repo_dirs = folders_of(in_repo)
+    by_lower = {p.lower(): p for p in files}
     found: dict[str, dict[str, list[dict]]] = {}
+    broken: dict[tuple[str, str], dict] = {}
     for src in files:
         if not src.lower().endswith((".md", ".markdown")):
             continue
@@ -541,7 +567,15 @@ def collect_refs(repo: Path, files: list[str], renames: dict) -> dict:
         seen: set[tuple[str, str]] = set()
         for link in scan["links"]:
             got = link_target(base, link["dest"], renames)
-            if not got or got[0] == src or got[0] not in published:
+            if not got or got[0] == src:
+                continue
+            if got[0] not in published:
+                kind = broken_kind(got[0], link["image"], in_repo, repo_dirs, published_dirs)
+                if kind:
+                    entry = broken.setdefault((src, link["dest"]), {
+                        "src": src, "line": link["line"], "dest": link["dest"], "target": got[0],
+                        "kind": kind, "count": 0, "hint": by_lower.get(got[0].lower(), "") if kind == "missing" else ""})
+                    entry["count"] += 1
                 continue
             target, frag = got
             if (target, link["block"]) in seen:
@@ -557,7 +591,24 @@ def collect_refs(repo: Path, files: list[str], renames: dict) -> dict:
         refs[target] = [[s, found[target][s]] for s in sources[:REFS_PER_TARGET]]
         if len(sources) > REFS_PER_TARGET:
             more[target] = len(sources) - REFS_PER_TARGET
-    return {"version": 1, "refs": refs, "more": more}
+    order = sorted(broken.values(), key=lambda b: (b["src"], b["line"], b["dest"]))
+    return {"version": 1, "refs": refs, "more": more}, order
+
+
+def broken_kind(target: str, image: bool, in_repo: set, repo_dirs: set, published_dirs: set) -> str:
+    """Why a link to an unpublished target fails on the site, or "" when it still works.
+
+    Mirrors the viewer's rewriteLink: a published folder opens in the viewer, the root opens
+    the home page, and anything else opens on GitHub, which works for a file in the repository.
+    An image has no such fallback: unless the file is published, the site shows a broken image.
+    """
+    if target == "" or target in published_dirs:
+        return "" if not image else "missing"
+    if target in in_repo:
+        return "unpublished" if image else ""
+    if target in repo_dirs:
+        return "missing" if image else ""
+    return "missing"
 
 
 # ── Config ──
@@ -626,13 +677,19 @@ def load_config(repo: Path) -> dict:
 # ── Build ──
 
 
-def build(repo: Path, out: Path, viewer: Path | None = None) -> dict:
+def build(repo: Path, out: Path, viewer: Path | None = None, broken: list | None = None) -> dict:
+    """Write the site to out and return its site-data.json.
+
+    When broken is a list, the broken links found in published Markdown are added to it.
+    They go to the run summary, never into the site.
+    """
     viewer = viewer or repo / SITE_DIR
     if not (viewer / "index.html").exists():
         raise SystemExit(f"No viewer found: {viewer / 'index.html'} does not exist.")
     cfg = load_config(repo)
     exclude = [glob_to_regex(p) for p in DEFAULT_EXCLUDE + cfg.get("exclude", [])]
-    files = sorted(p for p in tracked_files(repo) if is_published(p, exclude, cfg.get("includeHidden", False)))
+    tracked = tracked_files(repo)
+    files = sorted(p for p in tracked if is_published(p, exclude, cfg.get("includeHidden", False)))
     clash = [p for p in files if p in RESERVED or p.startswith(VIEWER_DIR + "/")]
     if clash:
         raise SystemExit(
@@ -681,7 +738,9 @@ def build(repo: Path, out: Path, viewer: Path | None = None) -> dict:
         "renames": {old: new for old, new in sorted(renames.items()) if new in set(files)},
     }
     # Generated side files, listed so the viewer fetches only what this build wrote.
-    refs = collect_refs(repo, files, data["renames"])
+    refs, found_broken = collect_refs(repo, files, data["renames"], tracked)
+    if broken is not None:
+        broken.extend(found_broken)
     outputs = {"refs": REFS_FILE} if refs["refs"] else {}
     if outputs:
         data["outputs"] = outputs
@@ -704,7 +763,48 @@ def build(repo: Path, out: Path, viewer: Path | None = None) -> dict:
     return data
 
 
-def summary(data: dict, limit: int = 1000) -> str:
+def safe(text: str) -> str:
+    """Text from a repository file, made safe for the run summary and the log.
+
+    HTML is escaped, and control characters, which a percent-decoded link can hold, become
+    U+FFFD, so one link can never start a new line or a workflow command.
+    """
+    return html.escape(CONTROL.sub("�", text))
+
+
+CONTROL = re.compile(r"[\x00-\x1f\x7f  ]")
+BROKEN_LIMIT = 200  # broken links listed in the run summary; the rest are counted
+BROKEN_WHY = {
+    "missing": "no such file in the repository",
+    "unpublished": "image is not published, so it shows as broken",
+}
+
+
+def broken_line(b: dict) -> str:
+    where = f"{b['src']}:{b['line']}"
+    resolved = "" if b["target"] == b["dest"] else f" (resolves to {b['target'] or '/'})"
+    times = f", {b['count']} times" if b["count"] > 1 else ""
+    hint = f"; did you mean {b['hint']}?" if b["hint"] else ""
+    return safe(f"{where}  {b['dest']}{resolved}: {BROKEN_WHY[b['kind']]}{times}{hint}")
+
+
+def broken_report(broken: list[dict], limit: int = BROKEN_LIMIT) -> list[str]:
+    if not broken:
+        return []
+    n = len(broken)
+    lines = [
+        "", f"#### {n} broken link{'s' if n != 1 else ''} in published Markdown", "",
+        "These links or images point at files a reader cannot open. The build carries on regardless.",
+        "", "<details open><summary>Each broken link, by file and line</summary>", "", "<pre>",
+    ]
+    lines += [broken_line(b) for b in broken[:limit]]
+    if n > limit:
+        lines.append(f"... and {n - limit} more")
+    lines += ["</pre>", "", "</details>"]
+    return lines
+
+
+def summary(data: dict, limit: int = 1000, broken: list[dict] | None = None) -> str:
     """Markdown for the workflow run's summary page, so a reader can check what went public."""
     paths = [f["path"] for f in data["files"]]
     folders: dict[str, int] = {}
@@ -715,6 +815,9 @@ def summary(data: dict, limit: int = 1000) -> str:
     lines += [f"| {html.escape(name)} | {count} |" for name, count in sorted(folders.items())]
     authors = sorted({c[2] for c in data["commits"]})
     lines += ["", f"The site also shows commit subjects, and these author names: {html.escape(', '.join(authors))}."]
+    if "refs" in data.get("outputs", {}):
+        lines += ["", f"It also publishes `{REFS_FILE}`, which lists the links between published files."]
+    lines += broken_report(broken or [])
     lines += ["", "<details><summary>Every published file</summary>", "", "<pre>"]
     lines += [html.escape(p) for p in paths[:limit]]
     if len(paths) > limit:
@@ -729,16 +832,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", default="_site", help="output folder, replaced on each run (default: _site)")
     parser.add_argument("--viewer", help="folder holding the viewer (default: .github/site in the repository)")
     args = parser.parse_args(argv)
-    data = build(Path(args.repo), Path(args.out), Path(args.viewer) if args.viewer else None)
+    broken: list[dict] = []
+    data = build(Path(args.repo), Path(args.out), Path(args.viewer) if args.viewer else None, broken)
     print(
         f"Built {len(data['files'])} files, {len(data['commits'])} commits, "
         f"{len(data['renames'])} renames into {args.out}/",
         file=sys.stderr,
     )
     step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+    if broken:
+        n = len(broken)
+        print(f"Found {n} broken link{'s' if n != 1 else ''} in published Markdown.", file=sys.stderr)
+        if step_summary:
+            print("The run summary lists them.", file=sys.stderr)
+        else:  # a local run: list them here, since there is no summary page
+            for b in broken[:BROKEN_LIMIT]:
+                print("  " + html.unescape(broken_line(b)), file=sys.stderr)
+            if n > BROKEN_LIMIT:
+                print(f"  ... and {n - BROKEN_LIMIT} more", file=sys.stderr)
     if step_summary:
         with open(step_summary, "a", encoding="utf-8") as handle:
-            handle.write(summary(data))
+            handle.write(summary(data, broken=broken))
     return 0
 
 

@@ -51,7 +51,7 @@ An adopter adds `templates/repo-pages.yml` and copies nothing. The workflow runs
 |---|---|
 | Preflight | Stops on a private repository whose site is public, and on missing Pages settings or `id-token: write`. It runs first, so nothing is checked out or built on a refusal |
 | Checkout | Fetches full history, because authors and dates come from git. It keeps no credentials on disk, because the build does not need them |
-| Build | Runs `build_site.py --viewer` into a temporary folder, and writes the published file list to the run's summary page |
+| Build | Runs `build_site.py --viewer` into a temporary folder, and writes the published file list and the broken link report to the run's summary page |
 | Upload and deploy | Publish the folder to GitHub Pages. The `deploy: false` input skips these steps and the preflight |
 
 Some choices here are worth keeping:
@@ -91,6 +91,18 @@ Generated side files are listed under an `outputs` key, so the viewer fetches on
 Each key of `refs` is a published file. Each entry names a published Markdown file that links to it, with up to three mentions. A mention holds the nearest heading above the link (`h`), about 160 characters of plain text around it (`x`), the `#fragment` the link used (`a`), and `l` for a link or `i` for an image (`k`). Each file lists at most 25 referring files, and `more` counts the rest. `_viewer/` is reserved, so the file cannot collide with a file in the repository.
 
 The generator finds links with one standard-library scan per Markdown file, `scan_markdown`. It skips front matter, fenced code and code spans, and reads inline links and images plus HTML `<a href>` and `<img src>`. It resolves each link with the viewer's own rules: drop the `?query`, percent-decode, resolve `.` and `..`, then follow the rename map. It does not read reference-style links yet. It also does not know indented code blocks, setext headings (a title underlined with `===` or `---`), HTML comments, or HTML blocks in which `marked` leaves Markdown unparsed. Every search in the scan is bounded, by line, block, label and destination length, so a hostile file cannot make it slow. A browser check renders every Markdown file with `marked` and fails if the two link lists differ.
+
+The same scan feeds the broken link report. A link counts as broken when it would fail for a reader, judged with the viewer's own fallback in `rewriteLink`:
+
+| The link points at | A link | An image |
+|---|---|---|
+| A published file | Works | Works |
+| A folder that holds published files, or the site root | Works, in the viewer | Broken |
+| A file in the repository that is not published | Works, on GitHub | Broken |
+| A folder in the repository that is not published | Works, on GitHub | Broken |
+| Nothing in the repository | Broken | Broken |
+
+The generator judges "in the repository" from `git ls-files`, not from the disk, so letter case counts as it does on GitHub Pages. A wrong-case path gets a suggestion when a published file matches it. Each (file, destination) pair is listed once, at its first line, with a count. The report goes only to the run summary, or to stderr on a local run. In a workflow run, stderr gets only the count, and every repository text is escaped with control characters replaced, so a link cannot start a workflow command. The report never reaches `site-data.json` or `_viewer/`. It does not check `#section` fragments yet, because the scan does not read setext headings and would raise false alarms. The gaps in the scan above can hide a broken link, and a link inside an indented code block or an HTML comment can be listed even though `marked` does not render it.
 
 ## How the demo works
 

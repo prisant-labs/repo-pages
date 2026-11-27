@@ -683,5 +683,98 @@ class RefsTests(BuildTests):
         self.assertEqual([s for s, _ in listed], sorted(s for s, _ in listed))
 
 
+class BrokenLinkTests(BuildTests):
+    def broken(self):
+        found: list = []
+        out = Path(self.tmp.name) / "site"
+        data = module.build(self.repo, out, broken=found)
+        return data, out, found
+
+    def test_broken_links_are_found_with_lines(self):
+        self.write("a.md", "\n".join([
+            "# A",
+            "",
+            "[gone](missing.md) and [gone again](missing.md)",      # 3: one entry, counted twice
+            "",
+            "![pic](skip/p.png)",                                    # 5: image of an unpublished file
+            "",
+            "[secret](skip/s.md) opens on GitHub, so it works",      # 7: not reported
+            "",
+            "[folder](docs/) [root](/) [here](#a) [web](https://example.com) [mail](mailto:x@example.com)",
+            "",
+            "[case](Docs/B.md)",                                     # 11: wrong case, with a hint
+            "",
+            "![a folder is not an image](docs)",                     # 13
+            "",
+            "```",
+            "[in code](nope.md)",
+            "```",
+            "",
+            "A paragraph that wraps",
+            "onto [a second line](../outside.md).",                  # 20
+            "",
+        ]))
+        self.write("docs/b.md", "x")
+        self.write("skip/p.png", "png")
+        self.write("skip/s.md", "x")
+        commit(self.repo, "Add", "Ann", "2026-01-01T10:00:00Z")
+        data, out, found = self.broken()
+        got = [(b["line"], b["dest"], b["kind"], b["count"], b["hint"]) for b in found]
+        self.assertEqual(got, [
+            (3, "missing.md", "missing", 2, ""),
+            (5, "skip/p.png", "unpublished", 1, ""),
+            (11, "Docs/B.md", "missing", 1, "docs/b.md"),
+            (13, "docs", "missing", 1, ""),
+            (20, "../outside.md", "missing", 1, ""),
+        ])
+        # The report is for the run summary only: nothing of it goes into the site.
+        self.assertNotIn("broken", data)
+        for name in ("site-data.json", "_viewer/refs.json"):
+            path = out / name
+            if path.exists():
+                self.assertNotIn("skip/p.png", path.read_text(encoding="utf-8"))
+
+    def test_report_follows_renames_and_skips_non_markdown(self):
+        self.write("docs/old.md", "x")
+        self.write("index.md", "[doc](docs/old.md)\n")
+        self.write("notes.txt", "[not markdown](missing.md)\n")
+        commit(self.repo, "Add", "Ann", "2026-01-01T10:00:00Z")
+        run(self.repo, "mv", "docs/old.md", "docs/new.md")
+        commit(self.repo, "Rename", "Ann", "2026-01-02T10:00:00Z")
+        _, _, found = self.broken()
+        self.assertEqual(found, [])
+
+    def test_summary_lists_broken_links_safely(self):
+        data = {"files": [{"path": "a.md"}], "commits": [], "outputs": {"refs": "_viewer/refs.json"}}
+        hostile = {"src": "a<b>.md", "line": 4, "dest": "x%0A::warning::y.md", "target": "x\n::warning::y.md",
+                   "kind": "missing", "count": 1, "hint": ""}
+        text = module.summary(data, broken=[hostile])
+        self.assertIn("#### 1 broken link in published Markdown", text)
+        self.assertIn("a&lt;b&gt;.md:4", text)
+        self.assertNotIn("\n::", text)
+        self.assertIn("_viewer/refs.json", text)
+        self.assertNotIn("broken link", module.summary(data))
+        many = [dict(hostile, line=i) for i in range(5)]
+        self.assertIn("... and 3 more", "\n".join(module.broken_report(many, limit=2)))
+
+    def test_local_run_lists_them_and_an_actions_run_counts_them(self):
+        self.write("a.md", "[gone](missing.md)\n")
+        commit(self.repo, "Add", "Ann", "2026-01-01T10:00:00Z")
+        out = str(Path(self.tmp.name) / "site")
+        argv = ["--repo", str(self.repo), "--out", out]
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, {}, clear=False), contextlib.redirect_stderr(err):
+            os.environ.pop("GITHUB_STEP_SUMMARY", None)
+            module.main(argv)
+        self.assertIn("a.md:1  missing.md: no such file in the repository", err.getvalue())
+        step = Path(self.tmp.name) / "summary.md"
+        err = io.StringIO()
+        with mock.patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(step)}), contextlib.redirect_stderr(err):
+            module.main(argv)
+        self.assertIn("Found 1 broken link", err.getvalue())
+        self.assertNotIn("missing.md", err.getvalue())
+        self.assertIn("a.md:1  missing.md", step.read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()
