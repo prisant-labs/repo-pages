@@ -724,7 +724,7 @@ class BrokenLinkTests(BuildTests):
             (3, "missing.md", "missing", 2, ""),
             (5, "skip/p.png", "unpublished", 1, ""),
             (11, "Docs/B.md", "missing", 1, "docs/b.md"),
-            (13, "docs", "missing", 1, ""),
+            (13, "docs", "folder", 1, ""),
             (20, "../outside.md", "missing", 1, ""),
         ])
         # The report is for the run summary only: nothing of it goes into the site.
@@ -733,6 +733,20 @@ class BrokenLinkTests(BuildTests):
             path = out / name
             if path.exists():
                 self.assertNotIn("skip/p.png", path.read_text(encoding="utf-8"))
+
+    def test_symlinks_submodules_and_front_matter(self):
+        self.write("a.md", "---\ntitle: A\n---\n\n[link](link.md) [module](vendor/lib) [inside](vendor/lib/x.md)\n\n[gone](gone.md)\n")
+        commit(self.repo, "Add", "Ann", "2026-01-01T10:00:00Z")
+        # Index entries need no files on disk, so this works where symlinks cannot be made.
+        blob = subprocess.run(["git", "hash-object", "-w", "--stdin"], cwd=self.repo, input=b"a.md",
+                              check=True, capture_output=True).stdout.decode().strip()
+        head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=self.repo, check=True, capture_output=True).stdout.decode().strip()
+        run(self.repo, "update-index", "--add", "--cacheinfo", f"120000,{blob},link.md")
+        run(self.repo, "update-index", "--add", "--cacheinfo", f"160000,{head},vendor/lib")
+        _, _, found = self.broken()
+        # A symlink and a submodule are in the repository and open on GitHub. A path inside
+        # a submodule is not in this repository's index, so it is reported.
+        self.assertEqual([(b["line"], b["dest"]) for b in found], [(5, "vendor/lib/x.md"), (7, "gone.md")])
 
     def test_report_follows_renames_and_skips_non_markdown(self):
         self.write("docs/old.md", "x")
@@ -756,6 +770,11 @@ class BrokenLinkTests(BuildTests):
         self.assertNotIn("broken link", module.summary(data))
         many = [dict(hostile, line=i) for i in range(5)]
         self.assertIn("... and 3 more", "\n".join(module.broken_report(many, limit=2)))
+        # Worst case: every listed line at full length, and every character one that escapes to six.
+        worst = [{"src": '"' * 4000, "line": i, "dest": '"' * 2000, "target": "&" * 2000, "kind": "missing",
+                  "count": 9, "hint": "<" * 4000} for i in range(module.BROKEN_LIMIT + 50)]
+        size = len(module.summary(data, broken=worst).encode("utf-8"))
+        self.assertLess(size, 600_000)  # GitHub drops a step summary over 1 MiB
 
     def test_local_run_lists_them_and_an_actions_run_counts_them(self):
         self.write("a.md", "[gone](missing.md)\n")

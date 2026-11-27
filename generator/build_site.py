@@ -115,20 +115,24 @@ def git(repo: Path, *args: str) -> str:
     return result.stdout
 
 
-def tracked_files(repo: Path) -> list[str]:
+def ls_files(repo: Path) -> list[tuple[str, str]]:
+    """Every tracked path with its git mode, symlinks and submodules included."""
+    rows = []
+    for row in git(repo, "ls-files", "-s", "-z").split("\0"):
+        if row:
+            meta, path = row.split("\t", 1)
+            rows.append((meta.split(" ", 1)[0], path))
+    return rows
+
+
+def tracked_files(repo: Path, rows: list[tuple[str, str]] | None = None) -> list[str]:
     """Tracked regular files only.
 
     A symlink is skipped because copying it would publish its target, which can
     be outside the repository or a file that `exclude` hides. A submodule is
     skipped because it has no content of its own here.
     """
-    files = []
-    for row in git(repo, "ls-files", "-s", "-z").split("\0"):
-        if row:
-            meta, path = row.split("\t", 1)
-            if meta.split(" ", 1)[0] in REGULAR_MODES:
-                files.append(path)
-    return files
+    return [path for mode, path in (ls_files(repo) if rows is None else rows) if mode in REGULAR_MODES]
 
 
 def read_log(repo: Path) -> list[dict]:
@@ -602,12 +606,10 @@ def broken_kind(target: str, image: bool, in_repo: set, repo_dirs: set, publishe
     the home page, and anything else opens on GitHub, which works for a file in the repository.
     An image has no such fallback: unless the file is published, the site shows a broken image.
     """
-    if target == "" or target in published_dirs:
-        return "" if not image else "missing"
+    if target == "" or target in published_dirs or target in repo_dirs:
+        return "folder" if image else ""
     if target in in_repo:
         return "unpublished" if image else ""
-    if target in repo_dirs:
-        return "missing" if image else ""
     return "missing"
 
 
@@ -688,8 +690,8 @@ def build(repo: Path, out: Path, viewer: Path | None = None, broken: list | None
         raise SystemExit(f"No viewer found: {viewer / 'index.html'} does not exist.")
     cfg = load_config(repo)
     exclude = [glob_to_regex(p) for p in DEFAULT_EXCLUDE + cfg.get("exclude", [])]
-    tracked = tracked_files(repo)
-    files = sorted(p for p in tracked if is_published(p, exclude, cfg.get("includeHidden", False)))
+    rows = ls_files(repo)
+    files = sorted(p for p in tracked_files(repo, rows) if is_published(p, exclude, cfg.get("includeHidden", False)))
     clash = [p for p in files if p in RESERVED or p.startswith(VIEWER_DIR + "/")]
     if clash:
         raise SystemExit(
@@ -738,7 +740,8 @@ def build(repo: Path, out: Path, viewer: Path | None = None, broken: list | None
         "renames": {old: new for old, new in sorted(renames.items()) if new in set(files)},
     }
     # Generated side files, listed so the viewer fetches only what this build wrote.
-    refs, found_broken = collect_refs(repo, files, data["renames"], tracked)
+    # Every tracked path counts as in the repository: a symlink or submodule opens on GitHub.
+    refs, found_broken = collect_refs(repo, files, data["renames"], [path for _, path in rows])
     if broken is not None:
         broken.extend(found_broken)
     outputs = {"refs": REFS_FILE} if refs["refs"] else {}
@@ -773,19 +776,25 @@ def safe(text: str) -> str:
 
 
 CONTROL = re.compile(r"[\x00-\x1f\x7f  ]")
-BROKEN_LIMIT = 200  # broken links listed in the run summary; the rest are counted
+BROKEN_LIMIT = 100  # broken links listed in the run summary; the rest are counted
+BROKEN_CHARS = 120  # each path or destination in a listed line, so the summary stays far under its 1 MiB limit
 BROKEN_WHY = {
     "missing": "no such file in the repository",
+    "folder": "image points at a folder",
     "unpublished": "image is not published, so it shows as broken",
 }
 
 
+def clip(text: str, limit: int = BROKEN_CHARS) -> str:
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
 def broken_line(b: dict) -> str:
-    where = f"{b['src']}:{b['line']}"
-    resolved = "" if b["target"] == b["dest"] else f" (resolves to {b['target'] or '/'})"
+    where = f"{clip(b['src'])}:{b['line']}"
+    resolved = "" if b["target"] == b["dest"] else f" (resolves to {clip(b['target']) or '/'})"
     times = f", {b['count']} times" if b["count"] > 1 else ""
-    hint = f"; did you mean {b['hint']}?" if b["hint"] else ""
-    return safe(f"{where}  {b['dest']}{resolved}: {BROKEN_WHY[b['kind']]}{times}{hint}")
+    hint = f"; did you mean {clip(b['hint'])}?" if b["hint"] else ""
+    return safe(f"{where}  {clip(b['dest'])}{resolved}: {BROKEN_WHY[b['kind']]}{times}{hint}")
 
 
 def broken_report(broken: list[dict], limit: int = BROKEN_LIMIT) -> list[str]:
