@@ -49,7 +49,7 @@ The gear opens a popover with four sections. [settings-spec.md](settings-spec.md
 - A one-page demo built from the real viewer and generator.
 - Browser checks for settings behavior and Referenced by, which the runner counts on every run. One of them renders every Markdown file with `marked` and fails if the generator's links differ from the rendered ones.
 - A workflow that runs the tests and checks on every relevant change, and publishes the demo from `main`.
-- A GitHub Action that publishes any repository from one workflow file, with checks before it publishes and a list of what went public.
+- A GitHub Action that publishes any repository from one workflow file, with checks before it publishes and a list of what went public. The same summary lists the broken links and images in published Markdown, with file and line, and never fails the build over them.
 - A [setup page](https://projects.prisantlabs.com/repo-pages/setup/) that writes the workflow and config files from a form. A check compares its rules with the code on every pull request.
 - Versioned releases, with a major tag that adopters can follow.
 

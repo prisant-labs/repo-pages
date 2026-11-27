@@ -22,6 +22,7 @@ repo-pages has no server. Its risks lie in what the generator publishes and in w
 - **Markdown that runs code.** The viewer passes every rendered Markdown file through DOMPurify. A Markdown file that still runs script is in scope.
 - **Other file views.** CSV, JSON, YAML, code and image views treat a file's content as data. Any such file that runs script is in scope.
 - **Commit data and references.** Author names, commit subjects, file paths, and the headings and excerpts that Referenced by shows appear in the page. If one of them can run script, that is in scope. So is a link to an unpublished file that makes its name appear in `_viewer/refs.json`.
+- **The run summary.** The file list and the broken link report repeat file paths and link text from the repository. A file whose name or link text can break out of the summary's markup, or start a workflow command in the log, is in scope.
 - **Browser storage.** The viewer validates everything it reads from browser storage. A stored value that breaks the page or runs script is in scope.
 
 ## What is by design
@@ -31,6 +32,7 @@ repo-pages has no server. Its risks lie in what the generator publishes and in w
 - **Publishing is public by default.** A GitHub Pages site can be read by anyone unless your plan offers access control. The generator publishes what you track, including any secret you committed.
 - **Published sites name people.** A site shows commit author names and commit subjects. It does not publish author email addresses.
 - **Links between documents are public data.** `_viewer/refs.json` lists which published documents link to which published files, with a short excerpt around each link. It repeats text that is already on the site, and it never names a file that is not published.
+- **The broken link report stays in the run.** The run summary lists broken links with the destination as the document wrote it, which can name an unpublished file. That text is already in a published document. The report itself never goes into the site. Anyone who can see the repository's workflow runs can read it.
 
 ## What is out of scope
 

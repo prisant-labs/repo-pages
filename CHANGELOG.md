@@ -9,6 +9,7 @@ This release adds a generated file to every site and changes no action input or 
 ### Added
 
 - **Referenced by.** A file that other documents on the site link to gets a "Referenced by" button in its header. The button works on every file type, so a PDF, a CSV or an image can say where it is used. It lists each referring document with the heading and sentence that hold the link, and each entry opens the document at that section. The generator collects the links from published Markdown, in Markdown syntax and as HTML `<a href>` and `<img src>`. It writes them to `_viewer/refs.json` and lists that file under a new `outputs` key in `site-data.json`. Links to unpublished files are never recorded, so an excluded file's name cannot appear. Each file lists at most 25 referring documents, and the button counts the rest.
+- **A broken link report.** Each run's summary page now lists the links and images in published Markdown that point at files a reader cannot open, with the file and line of each. A link to a file that is not in the repository is broken. So is an image of a file the site does not publish, because the site cannot show it. A link to an unpublished file is not listed, because the viewer opens it on GitHub. A wrong-case path gets a suggestion. The report only warns, so the build never fails over a link. A local run prints the same list.
 
 ### Changed
 

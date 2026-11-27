@@ -122,7 +122,7 @@ gh api -X POST "repos/{owner}/{repo}/pages" -f build_type=workflow
 git add .github/workflows/repo-pages.yml && git commit -m "Publish with repo-pages" && git push
 ```
 
-That is the whole install. The [workflow](templates/repo-pages.yml) is one small file, and the viewer and generator come from the action. If your default branch is not `main`, change the branch name in the workflow. Each run's summary page lists every file it published, so you can check what went public.
+That is the whole install. The [workflow](templates/repo-pages.yml) is one small file, and the viewer and generator come from the action. If your default branch is not `main`, change the branch name in the workflow. Each run's summary page lists every file it published, so you can check what went public. It also lists any links in your Markdown that point at missing files.
 
 To choose options first, use the **[setup page](https://projects.prisantlabs.com/repo-pages/setup/)**. It writes the workflow, a `repo-pages.json` when you change a default, and a Dependabot file when you pin a commit. It predicts what the action's preflight will say, and it shows which files would publish when you paste `git ls-files -s`. The page runs in your browser and sends nothing anywhere. It follows the latest release, which it names at the top.
 
