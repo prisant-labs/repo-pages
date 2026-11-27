@@ -257,6 +257,7 @@ The viewer and generator always ship together, so they cannot get out of step. T
 - A view for each file type, as the table below shows.
 - Breadcrumb menus, a file jump list, folder pages and a command palette (`/` or Cmd+K).
 - Paired notes, which show `page.md` beside `page.html`.
+- A "Referenced by" button on any file that other documents link to, even a PDF or a CSV, with the sentence that links to it.
 - Settings for the theme, interface text, tree text, row stripes, folder icons, sorting and more.
 
 | File type | What the reader sees |
@@ -280,6 +281,8 @@ The viewer and generator always ship together, so they cannot get out of step. T
 **Does every tracked file get published?** Yes, apart from `.github/**`, hidden files, symlinks, submodules and your `exclude` patterns. Check what you are publishing before you deploy.
 
 **Does a site name people?** Yes. It shows commit author names and commit subjects, and the Authors tab lists everyone. It does not publish author email addresses.
+
+**What is `_viewer/refs.json`?** It lists which published Markdown files link to which published files, with about 160 characters of text around each link. The Referenced by button reads it. It repeats only text that is already on the site, and a link to an unpublished file is left out, so it never names one.
 
 **Do HTML files run?** Yes, on the site's own origin by default. Set `sandboxHtml` to `true` if you publish HTML you do not fully trust. [SECURITY.md](SECURITY.md) explains why.
 

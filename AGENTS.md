@@ -40,7 +40,7 @@ Use `python` on Windows if `python3` is not found. Set `RP_BROWSER_CHANNEL=msedg
 - **Keep the demo honest.** The demo must come from the current viewer and generator. Do not commit the built page, because its dates change on every build.
 - **Treat the demo as public.** Pushes to `main` publish it to <https://projects.prisantlabs.com/repo-pages/>. Anything in the viewer or `examples/` becomes readable by anyone.
 - **Keep the viewer dependency-free.** It has no frontend build step and loads nothing from the network. Add third-party code only with a pinned version, a recorded hash and an entry in `THIRD-PARTY-NOTICES.md`. Keep the MIT and Lucide notice comments at the top of `viewer/index.html`, because built pages must carry them.
-- **Keep the public contract.** The action's inputs and the keys in `.github/repo-pages.json` are public. A change that breaks them needs a new major version.
+- **Keep the public contract.** The action's inputs and the keys in `.github/repo-pages.json` are public. A change that breaks them needs a new major version. A new generated file that is on by default, such as `_viewer/refs.json` or a later search index, is a minor version, because it breaks neither. Put such files under `_viewer/`, which no repository file can use, and list them under `outputs` in `site-data.json`.
 - **Pin what adopters inherit.** Keep every `uses:` in `action.yml` on a full commit SHA with a version comment.
 - **Respect the registry.** Add a reader setting through `KEYS` and `PREF_SPEC`, so it gets validation and Reset. Validate everything read from browser storage.
 - **Respect the rejected list.** Do not add anything under "Deliberately left out" in `docs/settings-spec.md` without a new decision.

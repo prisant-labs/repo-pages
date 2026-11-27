@@ -28,11 +28,11 @@ flowchart LR
 |---|---|---|
 | Viewer | `viewer/index.html` | The whole interface, in one file with inline CSS and JavaScript |
 | Vendored libraries | `viewer/vendor/` | `marked` and DOMPurify, loaded on the first Markdown render |
-| Generator | `generator/build_site.py` | Copies published files, adds the viewer and writes `site-data.json` |
+| Generator | `generator/build_site.py` | Copies published files, adds the viewer, and writes `site-data.json` and `_viewer/refs.json` |
 | Generator tests | `generator/test_build_site.py` | Standard library `unittest` tests that build temporary repositories |
 | Sample | `examples/initech/`, `examples/initech-history.json` | 88 parody files, and a script of 41 commits that gives them a history |
 | Demo build | `examples/build_demo.py` | Replays the history, runs the generator and folds everything into one page |
-| Browser checks | `tests/browser_checks.js` | Settings behavior checks that run inside the page. The runner prints the current count |
+| Browser checks | `tests/browser_checks.js` | Settings behavior and Referenced by checks that run inside the page. The runner prints the current count |
 | Check runner | `tests/run_browser_checks.mjs` | Opens a build or a URL in a browser and fails on any failed check |
 | Render check | `tests/run_render_check.mjs` | Opens one Markdown file on an ordinary build, which loads `marked` and DOMPurify by URL, and fails unless both load and the file renders |
 | Setup page | `setup/index.html` | A form that writes an adopter's workflow and config files. It is published beside the demo and is not part of any adopter's site |
@@ -80,6 +80,18 @@ The generator publishes tracked regular files, minus `.github/**`, hidden files 
 
 The generator writes `site-data.json` next to the viewer. It holds the site config, the commit list and one entry per file. Each file entry holds the size, the last change, the first add and the Markdown front matter. A rename map comes from the `R` lines in `git log`. The viewer reads nothing else at boot, so another data source could replace git without viewer changes.
 
+Generated side files are listed under an `outputs` key, so the viewer fetches only what this build wrote. The key is optional and additive, so `DATA_VERSION` stays 1. The viewer accepts only a plain file name under `_viewer/`. Today the one side file is `_viewer/refs.json`, written when at least one published document links to another published file:
+
+```json
+{"version": 1,
+ "refs": {"forms/tps-cover-sheet.pdf": [["handbook/policies/tps-reports.md", [{"h": "The cover sheet", "x": "Every TPS report gets the new cover sheet ...", "a": "", "k": "l"}]]]},
+ "more": {}}
+```
+
+Each key of `refs` is a published file. Each entry names a published Markdown file that links to it, with up to three mentions. A mention holds the nearest heading above the link (`h`), about 160 characters of plain text around it (`x`), the `#fragment` the link used (`a`), and `l` for a link or `i` for an image (`k`). Each file lists at most 25 referring files, and `more` counts the rest. `_viewer/` is reserved, so the file cannot collide with a file in the repository.
+
+The generator finds links with one standard-library scan per Markdown file, `scan_markdown`. It skips front matter, fenced code and code spans, and reads inline links and images plus HTML `<a href>` and `<img src>`. It resolves each link with the viewer's own rules: drop the `?query`, percent-decode, resolve `.` and `..`, then follow the rename map. It does not read reference-style links yet. It also does not know indented code blocks, setext headings (a title underlined with `===` or `---`), HTML comments, or HTML blocks in which `marked` leaves Markdown unparsed. Every search in the scan is bounded, by line, block, label and destination length, so a hostile file cannot make it slow. A browser check renders every Markdown file with `marked` and fails if the two link lists differ.
+
 ## How the demo works
 
 `build_demo.py` does four things:
@@ -87,7 +99,7 @@ The generator writes `site-data.json` next to the viewer. It holds the site conf
 1. It replays `initech-history.json` into a temporary git repository, with backdated authors and commit dates.
 2. It runs the real generator on that repository.
 3. It swaps three lines in the viewer, so files load from the page instead of the server. Each swap must match exactly once, so the build stops if those lines change.
-4. It writes one HTML file with the libraries, the data file and every published file inlined. It also adds a `noindex` tag, which matches the projects hub until the project is announced.
+4. It writes one HTML file with the libraries, the data file, the generated side files listed under `outputs`, and every published file inlined. It also adds a `noindex` tag, which matches the projects hub until the project is announced.
 
 Dates are relative to the build, so the output changes on every run. **Do not commit the built page.** Build it where you need it.
 
@@ -148,6 +160,6 @@ node tests/run_render_check.mjs /tmp/repo-pages-site
 node tests/run_setup_checks.mjs
 ```
 
-The generator tests do not cover the viewer. The browser checks cover settings behavior on one Markdown file, so a change to another view still needs a look in the browser.
+The generator tests do not cover the viewer. The browser checks cover settings behavior on one Markdown file, and Referenced by on the sample. They also compare the generator's links with the links `marked` renders in every Markdown file. A change to another view still needs a look in the browser.
 
-The browser checks run on the demo, which inlines `marked` and DOMPurify into the page, so they cannot notice a wrong `MARKED_SRC` or `PURIFY_SRC`. The render check covers that gap. It builds this repository the way the action builds an adopter's, opens `README.md`, and fails if either library does not load from `_viewer/vendor/` or the file falls back to plain text. In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` before passing a `#/p/...` route, or the shell rewrites it as a drive path.
+The browser checks run on the demo, which inlines `marked` and DOMPurify into the page, so they cannot notice a wrong `MARKED_SRC` or `PURIFY_SRC`. The render check covers that gap. It builds this repository the way the action builds an adopter's, opens `README.md`, and fails if either library does not load from `_viewer/vendor/` or the file falls back to plain text. It then fetches each file listed under `outputs` by URL, and opens a file that has references to check its Referenced by button. In Git Bash on Windows, set `MSYS_NO_PATHCONV=1` before passing a `#/p/...` route, or the shell rewrites it as a drive path.

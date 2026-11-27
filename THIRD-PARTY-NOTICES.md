@@ -6,7 +6,7 @@ The viewer ships two vendored libraries and uses icon shapes from a third projec
 |---|---|---|---|
 | `marked` 18.2.1 | Rendering Markdown | MIT | [viewer/vendor/README.md](viewer/vendor/README.md) |
 | DOMPurify 3.4.18 | Sanitizing rendered Markdown | Apache-2.0 or MPL-2.0 | [viewer/vendor/README.md](viewer/vendor/README.md) |
-| [Lucide](https://lucide.dev) | The outline folder icons in the tree | ISC | The notice below |
+| [Lucide](https://lucide.dev) | The outline folder icons in the tree, and the link icon on the Referenced by button | ISC | The notice below |
 
 ## marked and DOMPurify
 

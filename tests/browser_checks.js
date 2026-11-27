@@ -234,6 +234,69 @@ window.rpChecks = async function rpChecks() {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     check("Esc closes and returns focus", !q("#settingsBackdrop").classList.contains("open") && document.activeElement.id === "settingsBtn");
 
+    // Referenced by. The generator's links must match the links marked renders, file for file.
+    const refs = typeof loadRefs === "function" ? await loadRefs() : null;
+    if (!refs || !refs.size) skip("referenced by: this site has no refs.json");
+    else {
+      await loadMarkdownLibs();
+      const rendered = new Set(), headingIds = {}, scheme = /^[a-z][a-z0-9+.-]*:/i;
+      for (const f of FILES.filter(f => f.ext === "md" || f.ext === "markdown")) {
+        const div = document.createElement("div");
+        div.innerHTML = DOMPurify.sanitize(marked.parse(stripFrontMatter(await fetchText(f)), { gfm: true }));
+        headingIds[f.path] = new Set([...div.querySelectorAll("h1, h2, h3, h4, h5, h6")].map(h => "h-" + (slugify(h.textContent) || "section")));
+        const dests = [...div.querySelectorAll("a[href]")].map(a => a.getAttribute("href")).concat([...div.querySelectorAll("img[src]")].map(i => i.getAttribute("src")));
+        for (const d of dests) {
+          if (scheme.test(d) || d.startsWith("//")) continue;
+          const at = d.indexOf("#"), part = at < 0 ? d : d.slice(0, at);
+          const t = part && linkTarget(f.dir, part);
+          if (t && t !== f.path && BY_PATH[t]) rendered.add(f.path + " -> " + t);
+        }
+      }
+      const listed = new Set([...refs].flatMap(([t, e]) => e.rows.map(r => r.src + " -> " + t)));
+      const capped = new Set([...refs].filter(([, e]) => e.more).map(([t]) => t));
+      const missing = [...rendered].filter(p => !listed.has(p) && !capped.has(p.split(" -> ")[1])), extra = [...listed].filter(p => !rendered.has(p));
+      check("referenced by matches rendered links", !missing.length && !extra.length, [...missing.map(p => "missing " + p), ...extra.map(p => "extra " + p)].slice(0, 3).join("; "));
+      // Each entry opens its section: the stored heading must slug to a heading id in the rendered file.
+      const lost = [...refs.values()].flatMap(e => e.rows.flatMap(r => r.mentions.filter(m => m.h && !headingIds[r.src].has("h-" + slugify(m.h))).map(m => `${r.src} "${m.h}"`)));
+      check("referenced by headings land on a section", !lost.length, lost.slice(0, 3).join("; "));
+
+      const untouched = parseRefs({ refs: { [FILES[0].path]: [["javascript:alert(1)", [{ h: "", x: "", a: "", k: "l" }]], [FILES[1].path, "bad"]] }, more: [] });
+      check("forged refs are dropped", untouched.size === 0 && parseRefs(null).size === 0 && parseRefs({ refs: [] }).size === 0);
+
+      const ledger = "projects/rounding-incident/ledger-sample.csv";
+      const until = async (test, ms = 3000) => { for (let t = 0; t < ms && !test(); t += 50) await wait(50); return test(); };
+      if (refs.get(ledger)) {
+        location.hash = "#/p/" + ledger;
+        await until(() => state.route && state.route.path === ledger && document.title.startsWith(BY_PATH[ledger].name));
+        const shown = await until(() => q("#refsBtn"));
+        check("referenced by button on a CSV", shown && q("#refsBtn").textContent.trim().endsWith(String(refs.get(ledger).rows.length)), shown ? q("#refsBtn").textContent : "no button");
+        if (shown) {
+          q("#refsBtn").click();
+          const items = qa("#infoPopover.show .ref-item");
+          check("referenced by lists the referring files", items.length === refs.get(ledger).rows.length && items[0].textContent.includes("postmortem.md"));
+          check("referenced by shows the section and excerpt", !!q("#infoPopover .ref-head") && q("#infoPopover .ref-x").textContent.length > 10);
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+          check("Esc closes referenced by and returns focus", !q("#infoPopover").classList.contains("show") && document.activeElement.id === "refsBtn" && q("#refsBtn").getAttribute("aria-expanded") === "false");
+          q("#refsBtn").click(); q("#infoPopover .ref-mention").click();
+          const src = refs.get(ledger).rows[0].src;
+          check("an entry opens the referring file", await until(() => state.route && state.route.path === src && document.title.startsWith(BY_PATH[src].name)), location.hash);
+        }
+      } else skip("referenced by button: the sample's ledger CSV has no references");
+      const lonely = FILES.find(f => !refs.get(f.path) && f.ext === "md");
+      if (lonely) {
+        location.hash = "#/p/" + lonely.path;
+        await until(() => document.title.startsWith(lonely.name)); await loadRefs(); await wait(50);
+        check("no referenced by button without references", !q("#refsBtn"));
+      }
+      const host = q("#infoBtn");
+      if (host) {
+        showRefs({ rows: [{ src: FILES[0].path, mentions: [{ h: "<b>bold</b>", x: "<img src=x onerror=window.rpXss=1>", a: "", k: "l" }] }], more: 2 }, host);
+        check("referenced by text stays text", !q("#infoPopover img") && !q("#infoPopover b b") && q("#infoPopover .ref-x").textContent.includes("<img") && q("#infoPopover .ref-more").textContent.includes("2 more"));
+        closePopover();
+      }
+      location.hash = savedHash || "#/"; await wait(250);
+    }
+
     // Reveal off leaves the tree alone
     const target = FILES.find(f => f.dir.includes("/") && "#/p/" + f.path !== savedHash);
     if (target) {
